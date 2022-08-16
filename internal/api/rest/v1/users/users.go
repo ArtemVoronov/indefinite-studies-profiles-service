@@ -31,8 +31,8 @@ type CredentialsDTO struct {
 }
 
 type CredentialsValidationResult struct {
-	UserId  int  `json:"user_id" binding:"required,email"`
-	IsValid bool `json:"is_valid" binding:"required,email"`
+	UserId  int  `json:"userId" binding:"required,email"`
+	IsValid bool `json:"isValid" binding:"required"`
 }
 
 type UserListDTO struct {
