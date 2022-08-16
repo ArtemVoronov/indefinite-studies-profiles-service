@@ -25,6 +25,16 @@ type UserDTO struct {
 	State string
 }
 
+type CredentialsDTO struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+type CredentialsValidationResult struct {
+	UserId  int  `json:"user_id" binding:"required,email"`
+	IsValid bool `json:"is_valid" binding:"required,email"`
+}
+
 type UserListDTO struct {
 	Count  int
 	Offset int
@@ -278,4 +288,51 @@ func DeleteUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, api.DONE)
+}
+
+func IsValidCredentials(c *gin.Context) {
+	var credentials CredentialsDTO
+
+	if err := c.ShouldBindJSON(&credentials); err != nil {
+		validation.ProcessAndSendValidationErrorMessage(c, err)
+		return
+	}
+
+	// TODO: add counter of invalid athorizations, then use it for temporary blocking access
+	validatoionResult, err := checkCredentials(credentials.Email, credentials.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "Internal server error")
+		log.Printf("error during authenication: %v\n", err)
+		return
+	}
+
+	fmt.Printf("IsValidCredentials: %v\n", validatoionResult)
+	log.Printf("IsValidCredentials: %v\n", validatoionResult)
+
+	c.JSON(http.StatusOK, validatoionResult)
+}
+
+func UpdateCredentials(c *gin.Context) {
+	// TODO
+	c.JSON(http.StatusNotImplemented, "Not Implemented")
+}
+
+func checkCredentials(email string, password string) (CredentialsValidationResult, error) {
+	var result CredentialsValidationResult
+
+	data, err := db.Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+		userId, isValid, err := queries.IsValidCredentials(tx, ctx, email, utils.CreateSHA512HashHexEncoded(password)) // TODO: salt + hashing
+		return CredentialsValidationResult{UserId: userId, IsValid: isValid}, err
+	})()
+
+	if err != nil && err != sql.ErrNoRows {
+		return result, fmt.Errorf("unable to check credentials : %s", err)
+	}
+
+	result, ok := data.(CredentialsValidationResult)
+	if !ok {
+		return result, fmt.Errorf("unable to check credentials : %s", api.ERROR_ASSERT_RESULT_TYPE)
+	}
+
+	return result, nil
 }

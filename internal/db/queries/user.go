@@ -74,6 +74,10 @@ func IsValidCredentials(tx *sql.Tx, ctx context.Context, email string, passwordH
 		}
 	}
 
+	if !isValid {
+		id = -1
+	}
+
 	return id, isValid, nil
 }
 

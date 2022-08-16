@@ -48,6 +48,8 @@ func main() {
 		authorized.POST("/users", users.CreateUser)
 		authorized.PUT("/users/:id", users.UpdateUser)
 		authorized.DELETE("/users/:id", users.DeleteUser)
+		authorized.PUT("/users/credentials:validate", users.IsValidCredentials)
+		authorized.PUT("/users/credentials", users.UpdateCredentials)
 	}
 
 	app.StartServer(host, router)
