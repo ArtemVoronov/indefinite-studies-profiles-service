@@ -3,7 +3,8 @@ module github.com/ArtemVoronov/indefinite-studies-profiles-service
 go 1.18
 
 require (
-	github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-00010101000000-000000000000
+	github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220816052713-405042ce7636
+	github.com/gin-contrib/expvar v0.0.1
 	github.com/gin-gonic/gin v1.8.1
 	github.com/joho/godotenv v1.4.0
 	github.com/lib/pq v1.10.6
@@ -12,7 +13,6 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/gin-contrib/expvar v0.0.1 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
@@ -35,4 +35,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/ArtemVoronov/indefinite-studies-utils => ../indefinite-studies-utils // TODO remove after publishing
+// replace github.com/ArtemVoronov/indefinite-studies-utils => ../indefinite-studies-utils // TODO remove after publishing

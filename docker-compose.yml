@@ -1,14 +1,39 @@
 version: "3.9"
 services:
-  api:
-    container_name: indefinite-studies-porfiles-service-api
-    build: .
+  #TODO: add pgbouncer or pgcat and several instances of postgres
+  postgres:
+      image: postgres
+      environment:
+        POSTGRES_USER: "${DATABASE_USER}"
+        POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
+        POSTGRES_DB: "${DATABASE_NAME}"
+      volumes:
+        - database-volume:/var/lib/postgresql/data
+  
+  pgbouncer:
+    image: edoburu/pgbouncer
+    environment:
+       - DB_USER="${DATABASE_USER}"
+       - DB_PASSWORD="${DATABASE_PASSWORD}"
+       - DB_HOST=postgres
+       - DB_NAME="${DATABASE_NAME}" 
+       - POOL_MODE=transaction
     ports:
-      - "3000:3000"
+      - "5432:5432"
+    depends_on:
+      - postgres
+    
+  api:
+    build: .
+    deploy:
+      mode: replicated
+      replicas: 2
+    ports:
+      - "3005-3006:3005"
     depends_on:
       - liquibase
+  
   liquibase:
-    container_name: indefinite-studies-porfiles-service-api-liquibase
     image: liquibase/liquibase
     volumes:
       - ./internal/db/migrations:/liquibase/changelog
@@ -20,27 +45,18 @@ services:
         "--url=${DATABASE_URL}",
         "update"
     ]
-  # TODO: think about carelessness removing prod database  
-  # TODO: think about counting migrations and adding it to script or but license for liquibase and use pro functions
-  liquibase_rollback_all_and_create_db_again:
-    profiles: ["integration-tests-only"]
-    container_name: indefinite_studies_liquibase_rollback_all_and_create_db_again
-    image: liquibase/liquibase
-    volumes:
-      - ./internal/db/migrations:/liquibase/changelog
-    command: >
-        bash -c "liquibase --username=${DATABASE_USER} --password=${DATABASE_PASSWORD} --changeLogFile=changelog/db.changelog-root.xml --url=${DATABASE_URL} rollback-count 1
-        && liquibase --username=${DATABASE_USER} --password=${DATABASE_PASSWORD} --changeLogFile=changelog/db.changelog-root.xml --url=${DATABASE_URL} update"
-  liquibase_rollback_all:
-    profiles: ["integration-tests-only"]
-    container_name: indefinite_studies_liquibase_rollback_all
-    image: liquibase/liquibase
-    volumes:
-      - ./internal/db/migrations:/liquibase/changelog
-    command: >
-        bash -c "liquibase --username=${DATABASE_USER} --password=${DATABASE_PASSWORD} --changeLogFile=changelog/db.changelog-root.xml --url=${DATABASE_URL} rollback-count 1"
-    
+    depends_on:
+      - pgbouncer
+  
+  nginx:
+    build: ./nginx/
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  database-volume:
 networks:
   default:
-    external: true
-    name: indefinite-studies-environment
+    name: indefinite-studies-profiles-service-network

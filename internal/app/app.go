@@ -38,7 +38,7 @@ func InitEnv() {
 }
 
 func GetHost() string {
-	port := utils.EnvVarDefault("APP_PORT", "3000")
+	port := utils.EnvVarDefault("APP_PORT", "3005")
 	host := ":" + port
 	return host
 }
@@ -68,11 +68,11 @@ func StartServer(host string, router *gin.Engine) {
 	// The context is used to inform the server it has 5 seconds to finish the request it is currently handling
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	defer db.GetInstance().GetDB().Close()
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("Server forced to shutdown:", err)
 	}
 
-	defer db.GetInstance().GetDB().Close()
 	log.Println("Server exiting")
 }
