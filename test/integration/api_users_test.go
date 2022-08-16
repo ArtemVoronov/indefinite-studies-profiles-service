@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/db/entities"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/stretchr/testify/assert"
 )
 

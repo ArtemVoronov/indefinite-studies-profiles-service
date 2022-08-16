@@ -98,7 +98,7 @@ func RunWithRecreateDB(f TestFunc) func(t *testing.T) {
 
 func Setup() {
 	InitTestEnv()
-	auth.Setup()
+	// auth.Setup() // TODO clean or move test to indefinite-studies-qa-service
 	db.GetInstance()
 }
 

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/db/entities"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/db/queries"
@@ -17,7 +16,6 @@ import (
 )
 
 const (
-
 	TEST_USER_LOGIN_1    string = "Test user 1"
 	TEST_USER_EMAIL_1    string = "user1@somewhere.com"
 	TEST_USER_PASSWORD_1 string = "Test password1 "
@@ -32,7 +30,7 @@ const (
 	TEST_USER_LOGIN_TEMPLATE   string = "Test user "
 	TEST_USER_EMAIL_TEMPLATE   string = "user%v@somewhere.com"
 	TEST_USER_PASSORD_TEMPLATE string = "Test password "
-
+)
 
 type TestAsserts struct {
 }
@@ -62,11 +60,11 @@ func (p *TestAsserts) AssertEqualUserArrays(t *testing.T, expected []entities.Us
 type TestEntityGenerators struct {
 }
 
-type TestUtilsGenerators interface {	
+type TestUtilsGenerators interface {
 	GenerateUserLogin(template string, id int) string
 	GenerateUserPassword(template string, id int) string
 	GenerateUserEmail(template string, id int) string
-	GenerateUser(id int) entities.User	
+	GenerateUser(id int) entities.User
 }
 
 func (p *TestEntityGenerators) GenerateUserLogin(template string, id int) string {
@@ -92,7 +90,7 @@ func (p *TestEntityGenerators) GenerateUser(id int) entities.User {
 	}
 }
 
-type TestUtilsQueries interface {	
+type TestUtilsQueries interface {
 	CreateUserInDB(t *testing.T, tx *sql.Tx, ctx context.Context, login string, email string, password string, role string, state string) (int, error)
 	CreateUsersInDB(t *testing.T, tx *sql.Tx, ctx context.Context, count int, loginTemplate string, emailTemplate string, passwordTemplate string, role string, state string) error
 }
