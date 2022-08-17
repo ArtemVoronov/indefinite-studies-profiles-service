@@ -46,10 +46,10 @@ func main() {
 		authorized.GET("/users", users.GetUsers)
 		authorized.GET("/users/:id", users.GetUser)
 		authorized.POST("/users", users.CreateUser)
-		authorized.PUT("/users/:id", users.UpdateUser)
-		authorized.DELETE("/users/:id", users.DeleteUser)
+		// authorized.PUT("/users/:id", users.UpdateUser) // TODO: make clear updte per fields (optional fields + checking a permission to update the user)
+		// authorized.DELETE("/users/:id", users.DeleteUser) // TODO (checking a permission to delete the user)
 		authorized.PUT("/users/credentials:validate", users.IsValidCredentials)
-		authorized.PUT("/users/credentials", users.UpdateCredentials)
+		// authorized.PUT("/users/credentials", users.UpdateCredentials) // TODO (checking a permission to update the user)
 	}
 
 	app.StartServer(host, router)

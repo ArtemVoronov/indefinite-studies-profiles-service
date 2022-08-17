@@ -60,25 +60,20 @@ func GetUser(tx *sql.Tx, ctx context.Context, id int) (entities.User, error) {
 	return user, nil
 }
 
-func IsValidCredentials(tx *sql.Tx, ctx context.Context, email string, passwordHash string) (int, bool, error) {
-	id := -1
-	var isValid bool
+func GetUserByEmail(tx *sql.Tx, ctx context.Context, email string) (entities.User, error) {
+	var user entities.User
 
-	err := tx.QueryRowContext(ctx, "SELECT id, $2 = password FROM users WHERE email = $1 and state != $3 ", email, passwordHash, entities.USER_STATE_DELETED).
-		Scan(&id, &isValid)
+	err := tx.QueryRowContext(ctx, "SELECT id, login, email, password, role, state, create_date, last_update_date FROM users WHERE email = $1 and state != $2 ", email, entities.USER_STATE_DELETED).
+		Scan(&user.Id, &user.Login, &user.Email, &user.Password, &user.Role, &user.State, &user.CreateDate, &user.LastUpdateDate)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return id, isValid, err
+			return user, err
 		} else {
-			return id, isValid, fmt.Errorf("error at checking credentials for email '%v' from db, case after QueryRow.Scan: %s", email, err)
+			return user, fmt.Errorf("error at loading user by email '%v' from db, case after QueryRow.Scan: %s", email, err)
 		}
 	}
 
-	if !isValid {
-		id = -1
-	}
-
-	return id, isValid, nil
+	return user, nil
 }
 
 func CreateUser(tx *sql.Tx, ctx context.Context, login string, email string, password string, role string, state string) (int, error) {

@@ -15,6 +15,7 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserDTO struct {
@@ -174,9 +175,15 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
+	hashPassword, err := hashPassword(user.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "Unable to create user")
+		log.Printf("Unable to create user : %s", err)
+		return
+	}
+
 	data, err := db.Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		// TODO: add salting
-		result, err := queries.CreateUser(tx, ctx, user.Login, user.Email, utils.CreateSHA512HashHexEncoded(user.Password), user.Role, user.State)
+		result, err := queries.CreateUser(tx, ctx, user.Login, user.Email, string(hashPassword), user.Role, user.State)
 		return result, err
 	})()
 
@@ -233,12 +240,18 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// TODO: add salting
+	hashPassword, err := hashPassword(user.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "Unable to update user")
+		log.Printf("Unable to update user : %s", err)
+		return
+	}
+
 	// TODO: check password hash
 	// TODO: add route for changing password
 	// TODO: add route for restoring password
-	err := db.TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
-		err := queries.UpdateUser(tx, ctx, userId, user.Login, user.Email, utils.CreateSHA512HashHexEncoded(user.Password), user.Role, user.State)
+	err = db.TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
+		err := queries.UpdateUser(tx, ctx, userId, user.Login, user.Email, string(hashPassword), user.Role, user.State)
 		return err
 	})()
 
@@ -306,9 +319,6 @@ func IsValidCredentials(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("IsValidCredentials: %v\n", validatoionResult)
-	log.Printf("IsValidCredentials: %v\n", validatoionResult)
-
 	c.JSON(http.StatusOK, validatoionResult)
 }
 
@@ -317,22 +327,44 @@ func UpdateCredentials(c *gin.Context) {
 	c.JSON(http.StatusNotImplemented, "Not Implemented")
 }
 
-func checkCredentials(email string, password string) (CredentialsValidationResult, error) {
-	var result CredentialsValidationResult
+func checkCredentials(email string, password string) (*CredentialsValidationResult, error) {
+	var result *CredentialsValidationResult
 
 	data, err := db.Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		userId, isValid, err := queries.IsValidCredentials(tx, ctx, email, utils.CreateSHA512HashHexEncoded(password)) // TODO: salt + hashing
-		return CredentialsValidationResult{UserId: userId, IsValid: isValid}, err
+		user, err := queries.GetUserByEmail(tx, ctx, email)
+		return user, err
 	})()
 
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return &CredentialsValidationResult{UserId: -1, IsValid: false}, nil
+		}
 		return result, fmt.Errorf("unable to check credentials : %s", err)
 	}
 
-	result, ok := data.(CredentialsValidationResult)
+	user, ok := data.(entities.User)
 	if !ok {
 		return result, fmt.Errorf("unable to check credentials : %s", api.ERROR_ASSERT_RESULT_TYPE)
 	}
 
+	if isValidPassword(user.Password, password) {
+		result = &CredentialsValidationResult{UserId: user.Id, IsValid: true}
+	} else {
+		result = &CredentialsValidationResult{UserId: -1, IsValid: false}
+	}
+
 	return result, nil
+}
+
+func hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("unable to create password hash: %v", err.Error())
+	}
+	return string(hash), nil
+}
+
+func isValidPassword(hashedPassword string, rawPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(rawPassword))
+	return err == nil
 }
