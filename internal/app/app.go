@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/db"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/auth"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -25,7 +27,31 @@ func Cors(cors string) gin.HandlerFunc {
 
 func AuthReqired() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// TODO: ask auth-service about token
+		authHeader := c.GetHeader("Authorization")
+		// fmt.Println("---------------AuthReqired---------------")
+		// fmt.Printf("header: %v\n", header)
+		// fmt.Println("---------------AuthReqired---------------")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer") {
+			c.JSON(http.StatusUnauthorized, "Unauthorized")
+			c.Abort()
+			return
+		}
+
+		token := authHeader[len("Bearer "):]
+		verificationResult, err := auth.VerifyToken(token)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, "Internal Server Error")
+			log.Printf("error during verifying access token: %v\n", err)
+			c.Abort()
+			return
+		}
+
+		if (*verificationResult).IsExpired {
+			c.JSON(http.StatusUnauthorized, "Unauthorized")
+			c.Abort()
+			return
+		}
 
 		c.Next()
 	}

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/db"
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/db/entities"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
 )
 
 func GetUsers(tx *sql.Tx, ctx context.Context, limit int, offset int) ([]entities.User, error) {

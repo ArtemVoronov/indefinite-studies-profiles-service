@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/db"
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/db/entities"
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/db/queries"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/queries"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"

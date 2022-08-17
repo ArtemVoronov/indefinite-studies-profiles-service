@@ -36,7 +36,7 @@ services:
   liquibase:
     image: liquibase/liquibase
     volumes:
-      - ./internal/db/migrations:/liquibase/changelog
+      - ./configs/migrations:/liquibase/changelog
     command: [
         "liquibase",
         "--username=${DATABASE_USER}",

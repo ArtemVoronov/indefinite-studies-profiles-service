@@ -9,13 +9,15 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/ping"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/users"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/app"
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/db"
+	authService "github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/auth"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	app.InitEnv()
+	authService.Setup()
 	host := app.GetHost()
 	router := gin.Default()
 	router.Use(app.Cors(utils.EnvVar("CORS")))
