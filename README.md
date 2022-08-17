@@ -17,6 +17,9 @@ DATABASE_QUERY_TIMEOUT_IN_SECONDS=30
 #required for liquibase
 DATABASE_URL=jdbc:postgresql://postgres:5432/indefinite_studies_profiles_service_db
 
+#required for nginx
+HOST_API=192.168.0.18
+
 ```
 2. Check `docker-compose.yml` is appropriate to config that you are going to use (e.g.`docker-compose config`)
 3. Build images: `docker-compose build`

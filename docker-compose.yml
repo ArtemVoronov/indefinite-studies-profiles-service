@@ -49,9 +49,13 @@ services:
       - pgbouncer
   
   nginx:
-    build: ./nginx/
+    image: nginx
+    volumes:
+    - ./configs/templates/nginx:/etc/nginx/templates
     ports:
-      - "80:80"
+    - "81:80"
+    environment:
+    - HOST_API=${HOST_API}
     depends_on:
       - api
 

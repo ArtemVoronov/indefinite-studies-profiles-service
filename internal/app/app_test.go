@@ -11,7 +11,7 @@ import (
 )
 
 func TestDefaultHost(t *testing.T) {
-	expected := ":3000"
+	expected := ":3005"
 
 	actual := app.GetHost()
 

@@ -1,0 +1,14 @@
+upstream profiles-service-loadbalancer {
+    server ${HOST_API}:3005;
+    server ${HOST_API}:3006;
+}
+
+server {
+    listen       80;
+    listen  [::]:80;
+    server_name  localhost;
+
+    location / {
+        proxy_pass http://profiles-service-loadbalancer;
+    }
+}
