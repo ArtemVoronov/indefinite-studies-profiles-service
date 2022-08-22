@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"errors"
-	"expvar"
 	"fmt"
 	"log"
 	"net/http"
@@ -68,8 +67,8 @@ func setup() {
 }
 
 func shutdown() {
-	db.Instance().ShutDown()
-	auth.Instance().ShutDown()
+	db.Instance().Shutdown()
+	auth.Instance().Shutdown()
 }
 
 func loadEnv() {
