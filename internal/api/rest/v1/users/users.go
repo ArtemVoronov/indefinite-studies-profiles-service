@@ -154,7 +154,7 @@ func CreateUser(c *gin.Context) {
 	var user UserCreateDTO
 
 	if err := c.ShouldBindJSON(&user); err != nil {
-		validation.ProcessAndSendValidationErrorMessage(c, err)
+		validation.SendError(c, err)
 		return
 	}
 
@@ -219,7 +219,7 @@ func UpdateUser(c *gin.Context) {
 	var user UserEditDTO
 
 	if err := c.ShouldBindJSON(&user); err != nil {
-		validation.ProcessAndSendValidationErrorMessage(c, err)
+		validation.SendError(c, err)
 		return
 	}
 
@@ -307,7 +307,7 @@ func IsValidCredentials(c *gin.Context) {
 	var credentials CredentialsDTO
 
 	if err := c.ShouldBindJSON(&credentials); err != nil {
-		validation.ProcessAndSendValidationErrorMessage(c, err)
+		validation.SendError(c, err)
 		return
 	}
 
