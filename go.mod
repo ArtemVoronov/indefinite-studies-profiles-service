@@ -3,11 +3,10 @@ module github.com/ArtemVoronov/indefinite-studies-profiles-service
 go 1.18
 
 require (
-	github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220816052713-405042ce7636
+	github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-00010101000000-000000000000
 	github.com/gin-contrib/expvar v0.0.1
 	github.com/gin-gonic/gin v1.8.1
 	github.com/joho/godotenv v1.4.0
-	github.com/lib/pq v1.10.6
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 )
@@ -21,6 +20,7 @@ require (
 	github.com/goccy/go-json v0.9.7 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
+	github.com/lib/pq v1.10.6 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -34,3 +34,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/ArtemVoronov/indefinite-studies-utils => ../indefinite-studies-utils

@@ -88,7 +88,7 @@ func GetUsers(c *gin.Context) {
 		offset = 0
 	}
 
-	data, err := db.Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+	data, err := db.Instance().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
 		users, err := queries.GetUsers(tx, ctx, limit, offset)
 		return users, err
 	})()
@@ -125,7 +125,7 @@ func GetUser(c *gin.Context) {
 		return
 	}
 
-	data, err := db.Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+	data, err := db.Instance().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
 		user, err := queries.GetUser(tx, ctx, userId)
 		return user, err
 	})()
@@ -182,13 +182,13 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	data, err := db.Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+	data, err := db.Instance().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
 		result, err := queries.CreateUser(tx, ctx, user.Login, user.Email, string(hashPassword), user.Role, user.State)
 		return result, err
 	})()
 
 	if err != nil || data == -1 {
-		if err.Error() == db.ErrorUserDuplicateKey.Error() {
+		if err.Error() == queries.ErrorUserDuplicateKey.Error() {
 			c.JSON(http.StatusBadRequest, api.DUPLICATE_FOUND)
 		} else {
 			c.JSON(http.StatusInternalServerError, "Unable to create user")
@@ -250,7 +250,7 @@ func UpdateUser(c *gin.Context) {
 	// TODO: check password hash
 	// TODO: add route for changing password
 	// TODO: add route for restoring password
-	err = db.TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
+	err = db.Instance().TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
 		err := queries.UpdateUser(tx, ctx, userId, user.Login, user.Email, string(hashPassword), user.Role, user.State)
 		return err
 	})()
@@ -258,7 +258,7 @@ func UpdateUser(c *gin.Context) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, api.PAGE_NOT_FOUND)
-		} else if err.Error() == db.ErrorUserDuplicateKey.Error() {
+		} else if err.Error() == queries.ErrorUserDuplicateKey.Error() {
 			c.JSON(http.StatusBadRequest, api.DUPLICATE_FOUND)
 		} else {
 			c.JSON(http.StatusInternalServerError, "Unable to update user")
@@ -285,7 +285,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	err := db.TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
+	err := db.Instance().TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
 		err := queries.DeleteUser(tx, ctx, id)
 		return err
 	})()
@@ -330,7 +330,7 @@ func UpdateCredentials(c *gin.Context) {
 func checkCredentials(email string, password string) (*CredentialsValidationResult, error) {
 	var result *CredentialsValidationResult
 
-	data, err := db.Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+	data, err := db.Instance().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
 		user, err := queries.GetUserByEmail(tx, ctx, email)
 		return user, err
 	})()

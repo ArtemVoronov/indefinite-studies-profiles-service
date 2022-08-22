@@ -3,12 +3,14 @@ package queries
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
 )
+
+var ErrorUserDuplicateKey = errors.New("pq: duplicate key value violates unique constraint \"users_email_state_unique\"")
 
 func GetUsers(tx *sql.Tx, ctx context.Context, limit int, offset int) ([]entities.User, error) {
 	var user []entities.User
@@ -86,8 +88,8 @@ func CreateUser(tx *sql.Tx, ctx context.Context, login string, email string, pas
 		login, email, password, role, state, createDate, lastUpdateDate).
 		Scan(&lastInsertId) // scan will release the connection
 	if err != nil {
-		if err.Error() == db.ErrorUserDuplicateKey.Error() {
-			return -1, db.ErrorUserDuplicateKey
+		if err.Error() == ErrorUserDuplicateKey.Error() {
+			return -1, ErrorUserDuplicateKey
 		}
 		return -1, fmt.Errorf("error at inserting user (Login: '%s', Email: '%s') into db, case after QueryRow.Scan: %s", login, email, err)
 	}
@@ -103,8 +105,8 @@ func UpdateUser(tx *sql.Tx, ctx context.Context, id int, login string, email str
 	}
 	res, err := stmt.ExecContext(ctx, id, login, email, password, role, state, lastUpdateDate, entities.USER_STATE_DELETED)
 	if err != nil {
-		if err.Error() == db.ErrorUserDuplicateKey.Error() {
-			return db.ErrorUserDuplicateKey
+		if err.Error() == ErrorUserDuplicateKey.Error() {
+			return ErrorUserDuplicateKey
 		}
 		return fmt.Errorf("error at updating user (Id: %d, Login: '%s', Email: '%s', State: '%s'), case after executing statement: %s", id, login, email, state, err)
 	}
