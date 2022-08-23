@@ -8,8 +8,7 @@ import (
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/ping"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/users"
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/auth"
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
 	"github.com/gin-contrib/expvar"
 	"github.com/gin-gonic/gin"
@@ -20,13 +19,11 @@ func Start() {
 }
 
 func setup() {
-	db.Instance()
-	auth.Instance()
+	services.Instance()
 }
 
 func shutdown() {
-	db.Instance().Shutdown()
-	auth.Instance().Shutdown()
+	services.Instance().Shutdown()
 }
 
 func router() *gin.Engine {
@@ -80,7 +77,7 @@ func authReqired() gin.HandlerFunc {
 		}
 
 		token := authHeader[len("Bearer "):]
-		verificationResult, err := auth.Instance().VerifyToken(token)
+		verificationResult, err := services.Instance().Auth().VerifyToken(token)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, "Internal Server Error")
