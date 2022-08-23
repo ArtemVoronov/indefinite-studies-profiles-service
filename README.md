@@ -1,5 +1,5 @@
 # How to build and run
-1. Set environment vars in the config `.env` e.g.:
+1. Create appropriate `.env` file at the root of project, e.g.:
 ```
 #common settings
 APP_PORT=3005
@@ -28,7 +28,4 @@ AUTH_SERVICE_BASE_URL=http://192.168.0.18
 #http client
 HTTP_CLIENT_REQUEST_TIMEOUT_IN_SECONDS=30 # connection time, any redirects, and reading the response body
 ```
-2. Check `docker-compose.yml` is appropriate to config that you are going to use (e.g.`docker-compose config`)
-3. Build images: `docker-compose build`
-4. Run it: `docker-compose up`
-5. Stop it: `docker-compose down`
+2. `docker-compose build && docker-compose up`

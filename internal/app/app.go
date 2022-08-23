@@ -64,6 +64,7 @@ func router() *gin.Engine {
 	return router
 }
 
+// TODO: unify
 func authReqired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
