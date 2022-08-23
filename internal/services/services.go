@@ -37,11 +37,6 @@ func createServices() *Services {
 	}
 }
 
-func (s *Services) Setup() {
-	s.auth.Shutdown()
-	s.db.Shutdown()
-}
-
 func (s *Services) Shutdown() {
 	s.auth.Shutdown()
 	s.db.Shutdown()

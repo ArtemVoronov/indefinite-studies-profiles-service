@@ -3,6 +3,8 @@
 ```
 #common settings
 APP_PORT=3005
+APP_MODE=debug # release or debug
+APP_SHUTDOWN_TIMEOUT_IN_SECONDS=5
 CORS='*'
 
 #required for db service inside app
@@ -23,6 +25,8 @@ HOST_API=192.168.0.18
 #external services
 AUTH_SERVICE_BASE_URL=http://192.168.0.18
 
+#http client
+HTTP_CLIENT_REQUEST_TIMEOUT_IN_SECONDS=30 # connection time, any redirects, and reading the response body
 ```
 2. Check `docker-compose.yml` is appropriate to config that you are going to use (e.g.`docker-compose config`)
 3. Build images: `docker-compose build`
