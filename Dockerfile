@@ -10,6 +10,4 @@ COPY . ./
 
 RUN go build -o ./indefinite-studies-profiles-service
 
-EXPOSE 3000
-
 CMD [ "./indefinite-studies-profiles-service" ]
