@@ -2,7 +2,8 @@
 1. Create appropriate `.env` file at the root of project, e.g.:
 ```
 #common settings
-APP_PORT=3005
+APP_HTTP_API_PORT=3005
+APP_GRPC_API_PORT=50051
 APP_MODE=debug # release or debug
 APP_SHUTDOWN_TIMEOUT_IN_SECONDS=5
 CORS='*'

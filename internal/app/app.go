@@ -10,12 +10,27 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/users"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
+	profilesGRPC "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/profiles"
 	"github.com/gin-contrib/expvar"
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
 )
 
+type server struct {
+	profilesGRPC.UnimplementedProfilesServiceServer
+}
+
 func Start() {
-	app.Start(setup, shutdown, app.Host(), router())
+	app.LoadEnv()
+	serviceServer := &server{}
+
+	registerServices := func(s *grpc.Server) {
+		profilesGRPC.RegisterProfilesServiceServer(s, serviceServer)
+	}
+	go func() {
+		app.StartGRPC(setup, shutdown, app.HostGRPC(), registerServices)
+	}()
+	app.StartHTTP(setup, shutdown, app.HostHTTP(), router())
 }
 
 func setup() {
@@ -78,7 +93,7 @@ func authReqired() gin.HandlerFunc {
 		}
 
 		token := authHeader[len("Bearer "):]
-		verificationResult, err := services.Instance().Auth().VerifyToken(token)
+		verificationResult, err := services.Instance().AuthGRPC().VerifyToken(token)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, "Internal Server Error")
