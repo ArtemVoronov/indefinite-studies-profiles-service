@@ -30,6 +30,7 @@ services:
       replicas: 2
     ports:
       - "3005-3006:3005"
+      - "50051-50052:50051"
     depends_on:
       - liquibase
   

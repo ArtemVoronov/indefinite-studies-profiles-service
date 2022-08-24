@@ -51,6 +51,7 @@ func (s *Services) DB() *db.PostgreSQLService {
 func (s *Services) AuthREST() *auth.AuthService {
 	return s.authREST
 }
+
 func (s *Services) AuthGRPC() *auth.AuthGRPCService {
 	return s.authGRPC
 }
