@@ -1,10 +1,12 @@
 package services
 
 import (
+	"log"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
 	auth "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/auth"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
@@ -32,9 +34,15 @@ func createServices() *Services {
 	client := &http.Client{
 		Timeout: utils.EnvVarDurationDefault("HTTP_CLIENT_REQUEST_TIMEOUT_IN_SECONDS", time.Second, 30*time.Second),
 	}
+	// TODO: add env var with paths to certs
+	creds, err := app.LoadTLSCredentialsForClient("configs/tls/ca-cert.pem")
+	if err != nil {
+		log.Fatalf("unable to load TLS credentials")
+	}
+
 	return &Services{
 		authREST: auth.CreateAuthService(client, utils.EnvVar("AUTH_SERVICE_BASE_URL")),
-		authGRPC: auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST") + ":" + utils.EnvVar("AUTH_SERVICE_GRPC_PORT")),
+		authGRPC: auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST")+":"+utils.EnvVar("AUTH_SERVICE_GRPC_PORT"), &creds),
 		db:       db.CreatePostgreSQLService(),
 	}
 }

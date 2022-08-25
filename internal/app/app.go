@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,26 +10,58 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/ping"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/users"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/credentials"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
+	greetersGRPC "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/greeter"
 	profilesGRPC "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/profiles"
 	"github.com/gin-contrib/expvar"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 )
 
+// TODO: unify gRPC implementation
 type server struct {
 	profilesGRPC.UnimplementedProfilesServiceServer
+}
+
+func (s *server) ValidateCredentials(ctx context.Context, in *profilesGRPC.ValidateCredentialsRequest) (*profilesGRPC.ValidateCredentialsReply, error) {
+	log.Printf("Login: %v", in.GetLogin())       // todo clean
+	log.Printf("Password: %v", in.GetPassword()) // todo clean
+	result, err := credentials.CheckCredentials(in.GetLogin(), in.GetPassword())
+	if err != nil {
+		return nil, err
+	}
+
+	return &profilesGRPC.ValidateCredentialsReply{UserId: int32(result.UserId), IsValid: result.IsValid}, nil
+}
+
+type server2 struct {
+	greetersGRPC.UnimplementedGreeterServer
+}
+
+func (s *server2) SayHello(ctx context.Context, in *greetersGRPC.HelloRequest) (*greetersGRPC.HelloReply, error) {
+	log.Printf("Received: %v", in.GetName())
+	return &greetersGRPC.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
 func Start() {
 	app.LoadEnv()
 	serviceServer := &server{}
+	serviceServer2 := &server2{}
 
 	registerServices := func(s *grpc.Server) {
 		profilesGRPC.RegisterProfilesServiceServer(s, serviceServer)
+		greetersGRPC.RegisterGreeterServer(s, serviceServer2)
 	}
+
+	// TODO: add env var with paths to certs
+	creds, err := app.LoadTLSCredentialsForServer("configs/tls/server-cert.pem", "configs/tls/server-key.pem")
+	if err != nil {
+		log.Fatalf("unable to load TLS credentials")
+	}
+
 	go func() {
-		app.StartGRPC(setup, shutdown, app.HostGRPC(), registerServices)
+		app.StartGRPC(setup, shutdown, app.HostGRPC(), registerServices, &creds)
 	}()
 	app.StartHTTP(setup, shutdown, app.HostHTTP(), router())
 }

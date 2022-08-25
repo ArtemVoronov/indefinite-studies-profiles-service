@@ -2,13 +2,13 @@ version: "3.9"
 services:
   #TODO: add pgbouncer or pgcat and several instances of postgres
   postgres:
-      image: postgres
-      environment:
-        POSTGRES_USER: "${DATABASE_USER}"
-        POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
-        POSTGRES_DB: "${DATABASE_NAME}"
-      volumes:
-        - database-volume:/var/lib/postgresql/data
+    image: postgres
+    environment:
+      POSTGRES_USER: "${DATABASE_USER}"
+      POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
+      POSTGRES_DB: "${DATABASE_NAME}"
+    volumes:
+      - database-volume:/var/lib/postgresql/data
   
   pgbouncer:
     image: edoburu/pgbouncer
@@ -29,8 +29,8 @@ services:
       mode: replicated
       replicas: 2
     ports:
-      - "3005-3006:3005"
-      - "50051-50052:50051"
+      - "3007-3008:3005"
+      - "50053-50054:50051"
     depends_on:
       - liquibase
   
@@ -52,11 +52,23 @@ services:
   nginx:
     image: nginx
     volumes:
-    - ./configs/templates/nginx:/etc/nginx/templates
+      - ./configs/templates/nginx:/etc/nginx/templates
     ports:
-    - "81:80"
+      - "10002:80"
     environment:
-    - HOST_API=${HOST_API}
+      - HOST_API=${HOST_API}
+    depends_on:
+      - api
+
+  nginxGRPC:
+    image: nginx
+    volumes:
+      - ./configs/templates/nginxGRPC:/etc/nginx/templates
+      - ./configs/tls:/etc/nginx/certs
+    ports:
+      - "10003:1443"
+    environment:
+      - HOST_API=${HOST_API}
     depends_on:
       - api
 

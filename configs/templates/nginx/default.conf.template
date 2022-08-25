@@ -1,6 +1,6 @@
 upstream profiles-service-loadbalancer {
-    server ${HOST_API}:3005;
-    server ${HOST_API}:3006;
+    server ${HOST_API}:3007;
+    server ${HOST_API}:3008;
 }
 
 server {

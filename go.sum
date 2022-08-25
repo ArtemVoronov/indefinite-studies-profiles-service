@@ -9,6 +9,12 @@ github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220824132342-a02766b29
 github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220824132342-a02766b299fd/go.mod h1:SPNO1cj5o7awuVGzKYygGMXtpuv+flj0okKjvKSTFyE=
 github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220824133427-9b5a032f4015 h1:2jP/ejvV6UnFQBgMK3vNZD/HfXDLPus+mkVyHbovUj4=
 github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220824133427-9b5a032f4015/go.mod h1:SPNO1cj5o7awuVGzKYygGMXtpuv+flj0okKjvKSTFyE=
+github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220825101733-9c4bc5c03dfe h1:xSUz5Cui7mkSlBOaZ1KPgyOI2SQcQVuhl8JbYN3KgMc=
+github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220825101733-9c4bc5c03dfe/go.mod h1:SPNO1cj5o7awuVGzKYygGMXtpuv+flj0okKjvKSTFyE=
+github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220825103013-1c015ed10310 h1:9MD/1XSvjYsikqOaGfTgKOmvXivMKF04FBhwjv7sFTo=
+github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220825103013-1c015ed10310/go.mod h1:SPNO1cj5o7awuVGzKYygGMXtpuv+flj0okKjvKSTFyE=
+github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220825105357-949fe5d50420 h1:xXL2JxFaI8iAoZ1DRHUgGZYGTClPeF6dNYaFXVqzPLA=
+github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220825105357-949fe5d50420/go.mod h1:SPNO1cj5o7awuVGzKYygGMXtpuv+flj0okKjvKSTFyE=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=

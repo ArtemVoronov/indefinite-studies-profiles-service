@@ -9,13 +9,13 @@ import (
 	"strconv"
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/credentials"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/queries"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserDTO struct {
@@ -25,17 +25,6 @@ type UserDTO struct {
 	Role  string
 	State string
 }
-
-type CredentialsDTO struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
-
-type CredentialsValidationResult struct {
-	UserId  int  `json:"userId" binding:"required,email"`
-	IsValid bool `json:"isValid" binding:"required"`
-}
-
 type UserListDTO struct {
 	Count  int
 	Offset int
@@ -175,7 +164,7 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	hashPassword, err := hashPassword(user.Password)
+	hashPassword, err := credentials.HashPassword(user.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to create user")
 		log.Printf("Unable to create user : %s", err)
@@ -240,7 +229,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	hashPassword, err := hashPassword(user.Password)
+	hashPassword, err := credentials.HashPassword(user.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to update user")
 		log.Printf("Unable to update user : %s", err)
@@ -303,16 +292,17 @@ func DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, api.DONE)
 }
 
+// TODO: remove after finish with gRPC endpoint
 func IsValidCredentials(c *gin.Context) {
-	var credentials CredentialsDTO
+	var creds credentials.CredentialsDTO
 
-	if err := c.ShouldBindJSON(&credentials); err != nil {
+	if err := c.ShouldBindJSON(&creds); err != nil {
 		validation.SendError(c, err)
 		return
 	}
 
 	// TODO: add counter of invalid athorizations, then use it for temporary blocking access
-	validatoionResult, err := checkCredentials(credentials.Email, credentials.Password)
+	validatoionResult, err := credentials.CheckCredentials(creds.Email, creds.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Internal server error")
 		log.Printf("error during authenication: %v\n", err)
@@ -325,46 +315,4 @@ func IsValidCredentials(c *gin.Context) {
 func UpdateCredentials(c *gin.Context) {
 	// TODO
 	c.JSON(http.StatusNotImplemented, "Not Implemented")
-}
-
-func checkCredentials(email string, password string) (*CredentialsValidationResult, error) {
-	var result *CredentialsValidationResult
-
-	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		user, err := queries.GetUserByEmail(tx, ctx, email)
-		return user, err
-	})()
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return &CredentialsValidationResult{UserId: -1, IsValid: false}, nil
-		}
-		return result, fmt.Errorf("unable to check credentials : %s", err)
-	}
-
-	user, ok := data.(entities.User)
-	if !ok {
-		return result, fmt.Errorf("unable to check credentials : %s", api.ERROR_ASSERT_RESULT_TYPE)
-	}
-
-	if isValidPassword(user.Password, password) {
-		result = &CredentialsValidationResult{UserId: user.Id, IsValid: true}
-	} else {
-		result = &CredentialsValidationResult{UserId: -1, IsValid: false}
-	}
-
-	return result, nil
-}
-
-func hashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", fmt.Errorf("unable to create password hash: %v", err.Error())
-	}
-	return string(hash), nil
-}
-
-func isValidPassword(hashedPassword string, rawPassword string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(rawPassword))
-	return err == nil
 }
