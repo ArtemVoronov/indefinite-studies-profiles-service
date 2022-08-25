@@ -86,7 +86,7 @@ func authReqired() gin.HandlerFunc {
 		}
 
 		token := authHeader[len("Bearer "):]
-		verificationResult, err := services.Instance().AuthGRPC().VerifyToken(token)
+		verificationResult, err := services.Instance().Auth().VerifyToken(token)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, "Internal Server Error")

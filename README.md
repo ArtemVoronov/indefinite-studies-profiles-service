@@ -6,6 +6,8 @@ APP_HTTP_API_PORT=3005
 APP_GRPC_API_PORT=50051
 APP_MODE=debug # release or debug
 APP_SHUTDOWN_TIMEOUT_IN_SECONDS=5
+APP_TLS_CERT_PATH=configs/tls/server-cert.pem
+APP_TLS_KEY_PATH=configs/tls/server-key.pem
 CORS='*'
 
 #required for db service inside app
@@ -24,9 +26,10 @@ DATABASE_URL=jdbc:postgresql://postgres:5432/indefinite_studies_profiles_service
 HOST_API=192.168.0.18
 
 #external services
-AUTH_SERVICE_BASE_URL=http://192.168.0.18
 AUTH_SERVICE_GRPC_HOST=192.168.0.18
-AUTH_SERVICE_GRPC_PORT=50051
+AUTH_SERVICE_GRPC_PORT=10001
+AUTH_SERVICE_HTTP_PORT=10000
+AUTH_SERVICE_CLIENT_TLS_CERT_PATH=configs/tls/ca-cert.pem
 
 #http client
 HTTP_CLIENT_REQUEST_TIMEOUT_IN_SECONDS=30 # connection time, any redirects, and reading the response body

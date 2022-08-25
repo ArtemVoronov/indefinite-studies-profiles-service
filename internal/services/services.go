@@ -2,9 +2,7 @@ package services
 
 import (
 	"log"
-	"net/http"
 	"sync"
-	"time"
 
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
 	auth "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/auth"
@@ -13,9 +11,8 @@ import (
 )
 
 type Services struct {
-	authREST *auth.AuthService
-	authGRPC *auth.AuthGRPCService
-	db       *db.PostgreSQLService
+	auth *auth.AuthGRPCService
+	db   *db.PostgreSQLService
 }
 
 var once sync.Once
@@ -31,24 +28,19 @@ func Instance() *Services {
 }
 
 func createServices() *Services {
-	client := &http.Client{
-		Timeout: utils.EnvVarDurationDefault("HTTP_CLIENT_REQUEST_TIMEOUT_IN_SECONDS", time.Second, 30*time.Second),
-	}
-	// TODO: add env var with paths to certs
-	creds, err := app.LoadTLSCredentialsForClient("configs/tls/ca-cert.pem")
+	creds, err := app.LoadTLSCredentialsForClient(utils.EnvVar("AUTH_SERVICE_CLIENT_TLS_CERT_PATH"))
 	if err != nil {
 		log.Fatalf("unable to load TLS credentials")
 	}
 
 	return &Services{
-		authREST: auth.CreateAuthService(client, utils.EnvVar("AUTH_SERVICE_BASE_URL")),
-		authGRPC: auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST")+":"+utils.EnvVar("AUTH_SERVICE_GRPC_PORT"), &creds),
-		db:       db.CreatePostgreSQLService(),
+		auth: auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST")+":"+utils.EnvVar("AUTH_SERVICE_GRPC_PORT"), &creds),
+		db:   db.CreatePostgreSQLService(),
 	}
 }
 
 func (s *Services) Shutdown() {
-	s.authREST.Shutdown()
+	s.auth.Shutdown()
 	s.db.Shutdown()
 }
 
@@ -56,10 +48,6 @@ func (s *Services) DB() *db.PostgreSQLService {
 	return s.db
 }
 
-func (s *Services) AuthREST() *auth.AuthService {
-	return s.authREST
-}
-
-func (s *Services) AuthGRPC() *auth.AuthGRPCService {
-	return s.authGRPC
+func (s *Services) Auth() *auth.AuthGRPCService {
+	return s.auth
 }

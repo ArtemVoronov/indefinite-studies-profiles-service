@@ -292,26 +292,6 @@ func DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, api.DONE)
 }
 
-// TODO: remove after finish with gRPC endpoint
-func IsValidCredentials(c *gin.Context) {
-	var creds credentials.CredentialsDTO
-
-	if err := c.ShouldBindJSON(&creds); err != nil {
-		validation.SendError(c, err)
-		return
-	}
-
-	// TODO: add counter of invalid athorizations, then use it for temporary blocking access
-	validatoionResult, err := credentials.CheckCredentials(creds.Email, creds.Password)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, "Internal server error")
-		log.Printf("error during authenication: %v\n", err)
-		return
-	}
-
-	c.JSON(http.StatusOK, validatoionResult)
-}
-
 func UpdateCredentials(c *gin.Context) {
 	// TODO
 	c.JSON(http.StatusNotImplemented, "Not Implemented")
