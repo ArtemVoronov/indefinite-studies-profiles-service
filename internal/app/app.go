@@ -2,15 +2,14 @@ package app
 
 import (
 	"fmt"
-	"log"
 	"net/http"
-	"strings"
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/ping"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/users"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/profiles"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/auth"
 	"github.com/gin-contrib/expvar"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
@@ -50,7 +49,7 @@ func createRestApi() *gin.Engine {
 
 	v1.GET("/ping", ping.Ping)
 	authorized := router.Group("/api/v1")
-	authorized.Use(authReqired())
+	authorized.Use(app.AuthReqired(authenicate))
 	{
 		authorized.GET("/debug/vars", expvar.Handler())
 		authorized.GET("/safe-ping", ping.SafePing)
@@ -72,35 +71,6 @@ func createGrpcApi(s *grpc.Server) {
 	profiles.RegisterServiceServer(s)
 }
 
-// TODO: unify
-func authReqired() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		// fmt.Println("---------------AuthReqired---------------")
-		// fmt.Printf("header: %v\n", header)
-		// fmt.Println("---------------AuthReqired---------------")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer") {
-			c.JSON(http.StatusUnauthorized, "Unauthorized")
-			c.Abort()
-			return
-		}
-
-		token := authHeader[len("Bearer "):]
-		verificationResult, err := services.Instance().Auth().VerifyToken(token)
-
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, "Internal Server Error")
-			log.Printf("error during verifying access token: %v\n", err)
-			c.Abort()
-			return
-		}
-
-		if (*verificationResult).IsExpired {
-			c.JSON(http.StatusUnauthorized, "Unauthorized")
-			c.Abort()
-			return
-		}
-
-		c.Next()
-	}
+func authenicate(token string) (*auth.VerificationResult, error) {
+	return services.Instance().Auth().VerifyToken(token)
 }
