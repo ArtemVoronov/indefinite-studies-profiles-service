@@ -47,12 +47,13 @@ func createRestApi() *gin.Engine {
 	// TODO: add permission controller by user role and user state
 	v1 := router.Group("/api/v1")
 
-	v1.GET("/ping", ping.Ping)
+	v1.GET("/users/ping", ping.Ping)
+
 	authorized := router.Group("/api/v1")
 	authorized.Use(app.AuthReqired(authenicate))
 	{
-		authorized.GET("/debug/vars", expvar.Handler())
-		authorized.GET("/safe-ping", ping.SafePing)
+		authorized.GET("/users/debug/vars", expvar.Handler())
+		authorized.GET("/users/safe-ping", ping.SafePing)
 
 		// TODO: add signup
 
