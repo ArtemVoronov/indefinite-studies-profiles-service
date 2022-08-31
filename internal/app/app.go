@@ -60,6 +60,7 @@ func createRestApi() *gin.Engine {
 		authorized.GET("/users", users.GetUsers)
 		authorized.GET("/users/:id", users.GetUser)
 		authorized.POST("/users", users.CreateUser)
+		authorized.GET("/users/me", users.GetMyProfile)
 		// authorized.PUT("/users/:id", users.UpdateUser) // TODO: make clear updte per fields (optional fields + checking a permission to update the user)
 		// authorized.DELETE("/users/:id", users.DeleteUser) // TODO (checking a permission to delete the user)
 		// authorized.PUT("/users/credentials", users.UpdateCredentials) // TODO (checking a permission to update the user)

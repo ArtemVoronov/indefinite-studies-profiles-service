@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/credentials"
@@ -47,6 +48,10 @@ type UserCreateDTO struct {
 	Role     string `json:"role" binding:"required"`
 	State    string `json:"state" binding:"required"`
 }
+
+const (
+	TOKEN_TYPE_USER = "USER"
+)
 
 func convertUsers(users []entities.User) []UserDTO {
 	if users == nil {
@@ -97,6 +102,53 @@ func GetUsers(c *gin.Context) {
 
 	result := &UserListDTO{Data: convertUsers(users), Count: len(users), Offset: offset, Limit: limit}
 	c.JSON(http.StatusOK, result)
+}
+
+func GetMyProfile(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer") {
+		c.JSON(http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	token := authHeader[len("Bearer "):]
+	claims, err := services.Instance().Auth().GetTokenClaims(token)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "Unable to get the profile")
+		log.Printf("Unable to get the profile: %s", err)
+		return
+	}
+
+	if claims.Type != TOKEN_TYPE_USER {
+		c.JSON(http.StatusBadRequest, "Wrong type of JWT")
+		log.Printf("Wrong type of JWT: it is not %s type", TOKEN_TYPE_USER)
+		return
+	}
+
+	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+		user, err := queries.GetUser(tx, ctx, claims.Id)
+		return user, err
+	})()
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, api.PAGE_NOT_FOUND)
+		} else {
+			c.JSON(http.StatusInternalServerError, "Unable to get user")
+			log.Printf("Unable to get to user : %s", err)
+		}
+		return
+	}
+
+	user, ok := data.(entities.User)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, "Unable to get users")
+		log.Printf("Unable to get to users : %s", api.ERROR_ASSERT_RESULT_TYPE)
+		return
+	}
+
+	c.JSON(http.StatusOK, convertUser(user))
 }
 
 func GetUser(c *gin.Context) {
