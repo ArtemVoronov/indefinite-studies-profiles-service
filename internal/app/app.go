@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/grpc/v1/profiles"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/ping"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/api/rest/v1/users"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/profiles"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/auth"
 	"github.com/gin-contrib/expvar"
