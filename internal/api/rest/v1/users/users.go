@@ -34,39 +34,28 @@ type UserListDTO struct {
 }
 
 type UserEditDTO struct {
-	Login    string `json:"login" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-	Role     string `json:"role" binding:"required"`
-	State    string `json:"state" binding:"required"`
+	Id       *int    `json:"Id" binding:"required"`
+	Login    *string `json:"Login,omitempty"`
+	Email    *string `json:"Email,omitempty"`
+	Password *string `json:"Password,omitempty"`
+	Role     *string `json:"Role,omitempty"`
+	State    *string `json:"State,omitempty"`
 }
 
 type UserCreateDTO struct {
-	Login    string `json:"login" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-	Role     string `json:"role" binding:"required"`
-	State    string `json:"state" binding:"required"`
+	Login    string `json:"Login" binding:"required"`
+	Email    string `json:"Email" binding:"required,email"`
+	Password string `json:"Password" binding:"required"`
+	Role     string `json:"Role" binding:"required"`
+}
+
+type UserDeleteDTO struct {
+	Id int `json:"Id" binding:"required"`
 }
 
 const (
 	TOKEN_TYPE_USER = "USER"
 )
-
-func convertUsers(users []entities.User) []UserDTO {
-	if users == nil {
-		return make([]UserDTO, 0)
-	}
-	var result []UserDTO
-	for _, user := range users {
-		result = append(result, convertUser(user))
-	}
-	return result
-}
-
-func convertUser(user entities.User) UserDTO {
-	return UserDTO{Id: user.Id, Login: user.Login, Email: user.Email, Role: user.Role, State: user.State}
-}
 
 func GetUsers(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "50")
@@ -205,26 +194,16 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	possibleUserStates := entities.GetPossibleUserStates()
-	if !utils.Contains(possibleUserStates, user.State) {
-		c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to create user. Wrong 'State' value. Possible values: %v", possibleUserStates))
-		return
-	}
-
-	if user.State == entities.USER_STATE_DELETED {
-		c.JSON(http.StatusBadRequest, api.DELETE_VIA_POST_REQUEST_IS_FODBIDDEN)
-		return
-	}
-
 	hashPassword, err := credentials.HashPassword(user.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to create user")
 		log.Printf("Unable to create user : %s", err)
 		return
 	}
+	user.Password = hashPassword
 
 	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		result, err := queries.CreateUser(tx, ctx, user.Login, user.Email, string(hashPassword), user.Role, user.State)
+		result, err := queries.CreateUser(tx, ctx, toCreateUserParams(&user))
 		return result, err
 	})()
 
@@ -241,22 +220,7 @@ func CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, data)
 }
 
-// TODO: add optional field updating (field is not reqired and missed -> do not update it)
 func UpdateUser(c *gin.Context) {
-	userIdStr := c.Param("id")
-
-	if userIdStr == "" {
-		c.JSON(http.StatusBadRequest, "Missed ID")
-		return
-	}
-
-	var userId int
-	var parseErr error
-	if userId, parseErr = strconv.Atoi(userIdStr); parseErr != nil {
-		c.JSON(http.StatusBadRequest, api.ERROR_ID_WRONG_FORMAT)
-		return
-	}
-
 	var user UserEditDTO
 
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -264,35 +228,40 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	if user.State == entities.USER_STATE_DELETED {
-		c.JSON(http.StatusBadRequest, api.DELETE_VIA_PUT_REQUEST_IS_FODBIDDEN)
-		return
+	if user.State != nil {
+		if *user.State == entities.USER_STATE_DELETED {
+			c.JSON(http.StatusBadRequest, api.DELETE_VIA_PUT_REQUEST_IS_FODBIDDEN)
+			return
+		}
+
+		possibleUserStates := entities.GetPossibleUserStates()
+		if !utils.Contains(possibleUserStates, *user.State) {
+			c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to update user. Wrong 'State' value. Possible values: %v", possibleUserStates))
+			return
+		}
 	}
 
-	possibleUserRoles := entities.GetPossibleUserRoles()
-	if !utils.Contains(possibleUserRoles, user.Role) {
-		c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to update user. Wrong 'Role' value. Possible values: %v", possibleUserRoles))
-		return
+	if user.Role != nil {
+		possibleUserRoles := entities.GetPossibleUserRoles()
+		if !utils.Contains(possibleUserRoles, *user.Role) {
+			c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to update user. Wrong 'Role' value. Possible values: %v", possibleUserRoles))
+			return
+		}
 	}
 
-	possibleUserStates := entities.GetPossibleUserStates()
-	if !utils.Contains(possibleUserStates, user.State) {
-		c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to update user. Wrong 'State' value. Possible values: %v", possibleUserStates))
-		return
+	if user.Password != nil {
+		hashPassword, err := credentials.HashPassword(*user.Password)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, "Unable to update user")
+			log.Printf("Unable to update user : %s", err)
+			return
+		}
+		user.Password = &hashPassword
 	}
 
-	hashPassword, err := credentials.HashPassword(user.Password)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, "Unable to update user")
-		log.Printf("Unable to update user : %s", err)
-		return
-	}
+	err := services.Instance().DB().TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
+		err := queries.UpdateUser(tx, ctx, toUpdateUserParams(&user))
 
-	// TODO: check password hash
-	// TODO: add route for changing password
-	// TODO: add route for restoring password
-	err = services.Instance().DB().TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
-		err := queries.UpdateUser(tx, ctx, userId, user.Login, user.Email, string(hashPassword), user.Role, user.State)
 		return err
 	})()
 
@@ -312,22 +281,14 @@ func UpdateUser(c *gin.Context) {
 }
 
 func DeleteUser(c *gin.Context) {
-	idStr := c.Param("id")
-
-	if idStr == "" {
-		c.JSON(http.StatusBadRequest, "Missed ID")
-		return
-	}
-
-	var id int
-	var parseErr error
-	if id, parseErr = strconv.Atoi(idStr); parseErr != nil {
-		c.JSON(http.StatusBadRequest, api.ERROR_ID_WRONG_FORMAT)
+	var user UserDeleteDTO
+	if err := c.ShouldBindJSON(&user); err != nil {
+		validation.SendError(c, err)
 		return
 	}
 
 	err := services.Instance().DB().TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
-		err := queries.DeleteUser(tx, ctx, id)
+		err := queries.DeleteUser(tx, ctx, user.Id)
 		return err
 	})()
 
@@ -344,7 +305,37 @@ func DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, api.DONE)
 }
 
-func UpdateCredentials(c *gin.Context) {
-	// TODO
-	c.JSON(http.StatusNotImplemented, "Not Implemented")
+func convertUsers(users []entities.User) []UserDTO {
+	if users == nil {
+		return make([]UserDTO, 0)
+	}
+	var result []UserDTO
+	for _, user := range users {
+		result = append(result, convertUser(user))
+	}
+	return result
+}
+
+func convertUser(user entities.User) UserDTO {
+	return UserDTO{Id: user.Id, Login: user.Login, Email: user.Email, Role: user.Role, State: user.State}
+}
+
+func toUpdateUserParams(user *UserEditDTO) *queries.UpdateUserParams {
+	return &queries.UpdateUserParams{
+		Id:       user.Id,
+		Login:    user.Login,
+		Email:    user.Email,
+		Password: user.Password,
+		Role:     user.Role,
+		State:    user.State,
+	}
+}
+
+func toCreateUserParams(user *UserCreateDTO) *queries.CreateUserParams {
+	return &queries.CreateUserParams{
+		Login:    user.Login,
+		Email:    user.Email,
+		Password: user.Password,
+		Role:     user.Role,
+	}
 }
