@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
@@ -63,6 +64,11 @@ const (
 	SET email = email||'_deleted_'||$1, 
 		state = $2 
 	WHERE id = $1 and state != $2`
+
+	GET_USERS_BY_IDS_QUERY = `SELECT 
+		id, login, email, password, role, state, create_date, last_update_date
+	FROM users 
+	WHERE state != $2 and id IN ($1)`
 )
 
 func GetUsers(tx *sql.Tx, ctx context.Context, limit int, offset int) ([]entities.User, error) {
@@ -110,6 +116,48 @@ func GetUser(tx *sql.Tx, ctx context.Context, id int) (entities.User, error) {
 		} else {
 			return user, fmt.Errorf("error at loading user by id '%d' from db, case after QueryRow.Scan: %s", id, err)
 		}
+	}
+
+	return user, nil
+}
+
+func GetUsersByIds(tx *sql.Tx, ctx context.Context, ids []int) ([]entities.User, error) {
+	var user []entities.User
+	var (
+		id             int
+		login          string
+		email          string
+		password       string
+		role           string
+		state          string
+		createDate     time.Time
+		lastUpdateDate time.Time
+	)
+
+	var idsParam = ""
+	for _, inputId := range ids {
+		idsParam = idsParam + strconv.Itoa(inputId) + ","
+	}
+	if len(idsParam) > 0 {
+		idsParam = idsParam[:len(idsParam)-1]
+	}
+
+	rows, err := tx.QueryContext(ctx, GET_USERS_BY_IDS_QUERY, idsParam, entities.USER_STATE_DELETED)
+	if err != nil {
+		return user, fmt.Errorf("error at loading users by ids from db, case after Query: %s", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&id, &login, &email, &password, &role, &state, &createDate, &lastUpdateDate)
+		if err != nil {
+			return user, fmt.Errorf("error at loading users by ids from db, case iterating and using rows.Scan: %s", err)
+		}
+		user = append(user, entities.User{Id: id, Login: login, Email: email, Password: password, Role: role, State: state, CreateDate: createDate, LastUpdateDate: lastUpdateDate})
+	}
+	err = rows.Err()
+	if err != nil {
+		return user, fmt.Errorf("error at loading user by ids from db, case after iterating: %s", err)
 	}
 
 	return user, nil

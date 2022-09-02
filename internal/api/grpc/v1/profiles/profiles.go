@@ -2,10 +2,18 @@ package profiles
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
+	"log"
 
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/credentials"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/queries"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/profiles"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type ProfilesServiceServer struct {
@@ -23,4 +31,81 @@ func (s *ProfilesServiceServer) ValidateCredentials(ctx context.Context, in *pro
 	}
 
 	return &profiles.ValidateCredentialsReply{UserId: int32(result.UserId), IsValid: result.IsValid}, nil
+}
+
+func (s *ProfilesServiceServer) GetUser(ctx context.Context, in *profiles.GetUserRequest) (*profiles.GetUserReply, error) {
+	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+		user, err := queries.GetUser(tx, ctx, int(in.GetId()))
+		return user, err
+	})()
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return &profiles.GetUserReply{}, nil
+		} else {
+			return &profiles.GetUserReply{}, err
+		}
+	}
+
+	user, ok := data.(entities.User)
+	if !ok {
+		log.Printf("Unable to get to user : %s", api.ERROR_ASSERT_RESULT_TYPE)
+
+		return &profiles.GetUserReply{}, err
+	}
+
+	return toGetUserReply(&user), nil
+}
+
+func (s *ProfilesServiceServer) GetUsers(ctx context.Context, in *profiles.GetUsersRequest) (*profiles.GetUsersReply, error) {
+	input := in.GetIds()
+	ids := make([]int, len(input))
+	for i, id := range input {
+		ids[i] = int(id)
+	}
+	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+		users, err := queries.GetUsersByIds(tx, ctx, ids)
+		return users, err
+	})()
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return &profiles.GetUsersReply{}, nil
+		} else {
+			return &profiles.GetUsersReply{}, err
+		}
+	}
+
+	users, ok := data.([]entities.User)
+	if !ok {
+		log.Printf("Unable to get to user : %s", api.ERROR_ASSERT_RESULT_TYPE)
+
+		return &profiles.GetUsersReply{}, err
+	}
+
+	return &profiles.GetUsersReply{Users: toGetUsersReply(users)}, nil
+}
+
+func (s *ProfilesServiceServer) GetUsersStream(stream profiles.ProfilesService_GetUsersStreamServer) error {
+	return fmt.Errorf("NOT IMPLEMENTED") // TODO
+}
+
+func toGetUserReply(user *entities.User) *profiles.GetUserReply {
+	return &profiles.GetUserReply{
+		Id:             int32(user.Id),
+		Login:          user.Login,
+		Email:          user.Email,
+		Role:           user.Role,
+		State:          user.State,
+		CreateDate:     timestamppb.New(user.CreateDate),
+		LastUpdateDate: timestamppb.New(user.LastUpdateDate),
+	}
+}
+
+func toGetUsersReply(users []entities.User) []*profiles.GetUserReply {
+	var result []*profiles.GetUserReply = make([]*profiles.GetUserReply, 0, len(users))
+	for _, u := range users {
+		result = append(result, toGetUserReply(&u))
+	}
+	return result
 }
