@@ -3,7 +3,7 @@ module github.com/ArtemVoronov/indefinite-studies-profiles-service
 go 1.18
 
 require (
-	github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220902113702-2e7d63b8d4e7
+	github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20220905180540-a36d3f220d76
 	github.com/gin-contrib/expvar v0.0.1
 	github.com/gin-gonic/gin v1.8.1
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
