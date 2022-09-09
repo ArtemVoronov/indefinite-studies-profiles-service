@@ -16,6 +16,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// TODO: unify all CRUD ops of users into ProfilesService
+
 type ProfilesServiceServer struct {
 	profiles.UnimplementedProfilesServiceServer
 }
@@ -58,15 +60,20 @@ func (s *ProfilesServiceServer) GetUser(ctx context.Context, in *profiles.GetUse
 }
 
 func (s *ProfilesServiceServer) GetUsers(ctx context.Context, in *profiles.GetUsersRequest) (*profiles.GetUsersReply, error) {
-	input := in.GetIds()
-	ids := make([]int, len(input))
-	for i, id := range input {
-		ids[i] = int(id)
+	var data any
+	var err error
+
+	if len(in.GetIds()) > 0 {
+		data, err = services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+			users, err := queries.GetUsersByIds(tx, ctx, toInt(in.GetIds()), int(in.Limit), int(in.Offset))
+			return users, err
+		})()
+	} else {
+		data, err = services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
+			users, err := queries.GetUsers(tx, ctx, int(in.Limit), int(in.Offset))
+			return users, err
+		})()
 	}
-	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		users, err := queries.GetUsersByIds(tx, ctx, ids)
-		return users, err
-	})()
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -106,6 +113,15 @@ func toGetUsersReply(users []entities.User) []*profiles.GetUserReply {
 	var result []*profiles.GetUserReply = make([]*profiles.GetUserReply, 0, len(users))
 	for _, u := range users {
 		result = append(result, toGetUserReply(&u))
+	}
+	return result
+}
+
+// TODO: move to utils module
+func toInt(input []int32) []int {
+	result := make([]int, len(input))
+	for i := range result {
+		result[i] = int(input[i])
 	}
 	return result
 }
