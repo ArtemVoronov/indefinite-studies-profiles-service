@@ -12,6 +12,7 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/queries"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/profiles"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -65,7 +66,7 @@ func (s *ProfilesServiceServer) GetUsers(ctx context.Context, in *profiles.GetUs
 
 	if len(in.GetIds()) > 0 {
 		data, err = services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-			users, err := queries.GetUsersByIds(tx, ctx, toInt(in.GetIds()), int(in.Limit), int(in.Offset))
+			users, err := queries.GetUsersByIds(tx, ctx, utils.Int32SliceToIntSlice(in.GetIds()), int(in.Limit), int(in.Offset))
 			return users, err
 		})()
 	} else {
@@ -113,15 +114,6 @@ func toGetUsersReply(users []entities.User) []*profiles.GetUserReply {
 	var result []*profiles.GetUserReply = make([]*profiles.GetUserReply, 0, len(users))
 	for _, u := range users {
 		result = append(result, toGetUserReply(&u))
-	}
-	return result
-}
-
-// TODO: move to utils module
-func toInt(input []int32) []int {
-	result := make([]int, len(input))
-	for i := range result {
-		result[i] = int(input[i])
 	}
 	return result
 }
