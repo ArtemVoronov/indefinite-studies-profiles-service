@@ -48,6 +48,8 @@ func createRestApi() *gin.Engine {
 	v1 := router.Group("/api/v1")
 
 	v1.GET("/users/ping", ping.Ping)
+	// TODO: move to authorized group
+	v1.POST("/users", users.CreateUser) // TODO: check a permission to create the user
 
 	authorized := router.Group("/api/v1")
 	authorized.Use(app.AuthReqired(authenicate))
@@ -63,7 +65,6 @@ func createRestApi() *gin.Engine {
 		authorized.GET("/users", users.GetUsers)
 		authorized.GET("/users/:id", users.GetUser)
 		authorized.GET("/users/me", users.GetMyProfile)
-		authorized.POST("/users", users.CreateUser)   // TODO: check a permission to create the user
 		authorized.PUT("/users", users.UpdateUser)    // TODO: check a permission to update the user
 		authorized.DELETE("/users", users.DeleteUser) // TODO: check a permission to delete the user
 	}
