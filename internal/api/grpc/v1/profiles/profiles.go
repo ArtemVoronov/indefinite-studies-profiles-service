@@ -33,7 +33,7 @@ func (s *ProfilesServiceServer) ValidateCredentials(ctx context.Context, in *pro
 		return nil, err
 	}
 
-	return &profiles.ValidateCredentialsReply{UserId: int32(result.UserId), IsValid: result.IsValid}, nil
+	return &profiles.ValidateCredentialsReply{UserId: int32(result.UserId), IsValid: result.IsValid, Role: result.Role}, nil
 }
 
 func (s *ProfilesServiceServer) GetUser(ctx context.Context, in *profiles.GetUserRequest) (*profiles.GetUserReply, error) {

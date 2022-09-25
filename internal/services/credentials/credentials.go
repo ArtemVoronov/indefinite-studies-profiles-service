@@ -18,8 +18,9 @@ type CredentialsDTO struct {
 }
 
 type CredentialsValidationResult struct {
-	UserId  int  `json:"userId" binding:"required,email"`
-	IsValid bool `json:"isValid" binding:"required"`
+	UserId  int    `json:"userId" binding:"required,email"`
+	IsValid bool   `json:"isValid" binding:"required"`
+	Role    string `json:"role" binding:"required"`
 }
 
 func CheckCredentials(email string, password string) (*CredentialsValidationResult, error) {
@@ -32,7 +33,7 @@ func CheckCredentials(email string, password string) (*CredentialsValidationResu
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return &CredentialsValidationResult{UserId: -1, IsValid: false}, nil
+			return &CredentialsValidationResult{UserId: -1, IsValid: false, Role: ""}, nil
 		}
 		return result, fmt.Errorf("unable to check credentials : %s", err)
 	}
@@ -43,9 +44,9 @@ func CheckCredentials(email string, password string) (*CredentialsValidationResu
 	}
 
 	if isValidPassword(user.Password, password) {
-		result = &CredentialsValidationResult{UserId: user.Id, IsValid: true}
+		result = &CredentialsValidationResult{UserId: user.Id, IsValid: true, Role: user.Role}
 	} else {
-		result = &CredentialsValidationResult{UserId: -1, IsValid: false}
+		result = &CredentialsValidationResult{UserId: -1, IsValid: false, Role: ""}
 	}
 
 	return result, nil
