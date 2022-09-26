@@ -15,7 +15,6 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
-	utilsEntities "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db/entities"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -91,18 +90,15 @@ func GetUsers(c *gin.Context) {
 }
 
 func GetMyProfile(c *gin.Context) {
-	userType := app.GetCurrentUserType(c)
-
-	if userType != utilsEntities.TOKEN_TYPE_USER {
-		c.JSON(http.StatusBadRequest, "Wrong type of JWT")
-		log.Printf("Wrong type of JWT: it is not %s type", utilsEntities.TOKEN_TYPE_USER)
+	userId, ok := c.Get(app.CTX_TOKEN_ID_KEY)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, "Internal Server Error")
+		log.Printf("Unauthorized")
 		return
 	}
 
-	userId := app.GetCurrentUserId(c)
-
 	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		user, err := queries.GetUser(tx, ctx, userId)
+		user, err := queries.GetUser(tx, ctx, userId.(int))
 		return user, err
 	})()
 
@@ -214,21 +210,9 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	userTypeFromCtx := app.GetCurrentUserType(c)
-
-	if userTypeFromCtx != utilsEntities.TOKEN_TYPE_USER {
-		c.JSON(http.StatusBadRequest, "Wrong type of JWT")
-		log.Printf("wrong type of JWT: %s", userTypeFromCtx)
-		return
-	}
-
-	userRoleFromCtx := app.GetCurrentUserRole(c)
-
-	userIdFromCtx := app.GetCurrentUserId(c)
-
-	if userIdFromCtx != *user.Id || userRoleFromCtx != utilsEntities.USER_ROLE_OWNER {
+	if !app.IsSameUserOrHasOwnerRole(c, *user.Id) {
 		c.JSON(http.StatusForbidden, "Forbidden")
-		log.Printf("Forbidden tp update user. User ID from ctx: %v. User Role from ctx: %v. User ID from body: %v", userIdFromCtx, userRoleFromCtx, *user.Id)
+		log.Printf("Forbidden to update user. User ID from body: %v", *user.Id)
 		return
 	}
 
@@ -291,21 +275,9 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	userTypeFromCtx := app.GetCurrentUserType(c)
-
-	if userTypeFromCtx != utilsEntities.TOKEN_TYPE_USER {
-		c.JSON(http.StatusBadRequest, "Wrong type of JWT")
-		log.Printf("wrong type of JWT: %s", userTypeFromCtx)
-		return
-	}
-
-	userRoleFromCtx := app.GetCurrentUserRole(c)
-
-	userIdFromCtx := app.GetCurrentUserId(c)
-
-	if userIdFromCtx != user.Id || userRoleFromCtx != utilsEntities.USER_ROLE_OWNER {
+	if !app.IsSameUserOrHasOwnerRole(c, user.Id) {
 		c.JSON(http.StatusForbidden, "Forbidden")
-		log.Printf("Forbidden tp delete user. User ID from ctx: %v. User Role from ctx: %v. User ID from body: %v", userIdFromCtx, userRoleFromCtx, user.Id)
+		log.Printf("Forbidden to delete user. User ID from body: %v", user.Id)
 		return
 	}
 

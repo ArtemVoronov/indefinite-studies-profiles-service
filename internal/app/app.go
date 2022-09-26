@@ -80,7 +80,7 @@ func createRestApi(logger *logrus.Logger) *gin.Engine {
 		authorized.GET("/users/:id", app.RequiredOwnerRole(), users.GetUser)
 		authorized.GET("/users/me", users.GetMyProfile)
 		authorized.PUT("/users", users.UpdateUser)
-		authorized.DELETE("/users", app.RequiredOwnerRole(), users.DeleteUser)
+		authorized.DELETE("/users", users.DeleteUser)
 	}
 
 	return router
