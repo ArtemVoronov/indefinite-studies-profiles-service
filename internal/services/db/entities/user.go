@@ -1,6 +1,10 @@
 package entities
 
-import "time"
+import (
+	"time"
+
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db/entities"
+)
 
 type User struct {
 	Id             int
@@ -20,16 +24,10 @@ const (
 	USER_STATE_DELETED   string = "DELETED"
 )
 
-const (
-	USER_ROLE_OWNER    string = "OWNER"
-	USER_ROLE_RESIDENT string = "RESIDNET"
-	USER_ROLE_GI       string = "GI"
-)
-
 func GetPossibleUserStates() []string {
 	return []string{USER_STATE_NEW, USER_STATE_CONFRIMED, USER_STATE_BLOCKED, USER_STATE_DELETED}
 }
 
 func GetPossibleUserRoles() []string {
-	return []string{USER_ROLE_OWNER, USER_ROLE_RESIDENT, USER_ROLE_GI}
+	return []string{entities.USER_ROLE_OWNER, entities.USER_ROLE_RESIDENT, entities.USER_ROLE_GI}
 }

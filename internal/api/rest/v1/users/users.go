@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/credentials"
@@ -15,6 +14,8 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/queries"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
+	utilsEntities "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db/entities"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -53,10 +54,6 @@ type UserDeleteDTO struct {
 	Id int `json:"Id" binding:"required"`
 }
 
-const (
-	TOKEN_TYPE_USER = "USER"
-)
-
 func GetUsers(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "50")
 	offsetStr := c.DefaultQuery("offset", "0")
@@ -94,29 +91,18 @@ func GetUsers(c *gin.Context) {
 }
 
 func GetMyProfile(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer") {
-		c.JSON(http.StatusUnauthorized, "Unauthorized")
-		return
-	}
+	userType := app.GetCurrentUserType(c)
 
-	token := authHeader[len("Bearer "):]
-	claims, err := services.Instance().Auth().GetTokenClaims(token)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, "Unable to get the profile")
-		log.Printf("Unable to get the profile: %s", err)
-		return
-	}
-
-	if claims.Type != TOKEN_TYPE_USER {
+	if userType != utilsEntities.TOKEN_TYPE_USER {
 		c.JSON(http.StatusBadRequest, "Wrong type of JWT")
-		log.Printf("Wrong type of JWT: it is not %s type", TOKEN_TYPE_USER)
+		log.Printf("Wrong type of JWT: it is not %s type", utilsEntities.TOKEN_TYPE_USER)
 		return
 	}
+
+	userId := app.GetCurrentUserId(c)
 
 	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		user, err := queries.GetUser(tx, ctx, claims.Id)
+		user, err := queries.GetUser(tx, ctx, userId)
 		return user, err
 	})()
 
@@ -228,6 +214,24 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
+	userTypeFromCtx := app.GetCurrentUserType(c)
+
+	if userTypeFromCtx != utilsEntities.TOKEN_TYPE_USER {
+		c.JSON(http.StatusBadRequest, "Wrong type of JWT")
+		log.Printf("wrong type of JWT: %s", userTypeFromCtx)
+		return
+	}
+
+	userRoleFromCtx := app.GetCurrentUserRole(c)
+
+	userIdFromCtx := app.GetCurrentUserId(c)
+
+	if userIdFromCtx != *user.Id || userRoleFromCtx != utilsEntities.USER_ROLE_OWNER {
+		c.JSON(http.StatusForbidden, "Forbidden")
+		log.Printf("Forbidden tp update user. User ID from ctx: %v. User Role from ctx: %v. User ID from body: %v", userIdFromCtx, userRoleFromCtx, *user.Id)
+		return
+	}
+
 	if user.State != nil {
 		if *user.State == entities.USER_STATE_DELETED {
 			c.JSON(http.StatusBadRequest, api.DELETE_VIA_PUT_REQUEST_IS_FODBIDDEN)
@@ -284,6 +288,24 @@ func DeleteUser(c *gin.Context) {
 	var user UserDeleteDTO
 	if err := c.ShouldBindJSON(&user); err != nil {
 		validation.SendError(c, err)
+		return
+	}
+
+	userTypeFromCtx := app.GetCurrentUserType(c)
+
+	if userTypeFromCtx != utilsEntities.TOKEN_TYPE_USER {
+		c.JSON(http.StatusBadRequest, "Wrong type of JWT")
+		log.Printf("wrong type of JWT: %s", userTypeFromCtx)
+		return
+	}
+
+	userRoleFromCtx := app.GetCurrentUserRole(c)
+
+	userIdFromCtx := app.GetCurrentUserId(c)
+
+	if userIdFromCtx != user.Id || userRoleFromCtx != utilsEntities.USER_ROLE_OWNER {
+		c.JSON(http.StatusForbidden, "Forbidden")
+		log.Printf("Forbidden tp delete user. User ID from ctx: %v. User Role from ctx: %v. User ID from body: %v", userIdFromCtx, userRoleFromCtx, user.Id)
 		return
 	}
 
