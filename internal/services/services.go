@@ -8,13 +8,15 @@ import (
 	auth "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/auth"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/feed"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/whitelist"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 )
 
 type Services struct {
-	auth *auth.AuthGRPCService
-	db   *db.PostgreSQLService
-	feed *feed.FeedBuilderGRPCService
+	auth      *auth.AuthGRPCService
+	db        *db.PostgreSQLService
+	feed      *feed.FeedBuilderGRPCService
+	whitelist *whitelist.WhiteListService
 }
 
 var once sync.Once
@@ -40,9 +42,10 @@ func createServices() *Services {
 	}
 
 	return &Services{
-		auth: auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST")+":"+utils.EnvVar("AUTH_SERVICE_GRPC_PORT"), &authcreds),
-		feed: feed.CreateFeedBuilderGRPCService(utils.EnvVar("FEED_SERVICE_GRPC_HOST")+":"+utils.EnvVar("FEED_SERVICE_GRPC_PORT"), &feedcreds),
-		db:   db.CreatePostgreSQLService(),
+		auth:      auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST")+":"+utils.EnvVar("AUTH_SERVICE_GRPC_PORT"), &authcreds),
+		feed:      feed.CreateFeedBuilderGRPCService(utils.EnvVar("FEED_SERVICE_GRPC_HOST")+":"+utils.EnvVar("FEED_SERVICE_GRPC_PORT"), &feedcreds),
+		db:        db.CreatePostgreSQLService(),
+		whitelist: whitelist.CreateWhiteListService(utils.EnvVar("APP_WHITE_LIST_PATH")),
 	}
 }
 
@@ -50,6 +53,7 @@ func (s *Services) Shutdown() {
 	s.auth.Shutdown()
 	s.db.Shutdown()
 	s.feed.Shutdown()
+	s.whitelist.Shutdown()
 }
 
 func (s *Services) DB() *db.PostgreSQLService {
@@ -62,4 +66,8 @@ func (s *Services) Auth() *auth.AuthGRPCService {
 
 func (s *Services) Feed() *feed.FeedBuilderGRPCService {
 	return s.feed
+}
+
+func (s *Services) Whitelist() *whitelist.WhiteListService {
+	return s.whitelist
 }

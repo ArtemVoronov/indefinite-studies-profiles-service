@@ -170,6 +170,12 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
+	isAllowed := services.Instance().Whitelist().Contains(user.Email)
+	if !isAllowed {
+		c.JSON(http.StatusForbidden, "Forbidden")
+		return
+	}
+
 	possibleUserRoles := entities.GetPossibleUserRoles()
 	if !utils.Contains(possibleUserRoles, user.Role) {
 		c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to create user. Wrong 'Role' value. Possible values: %v", possibleUserRoles))
