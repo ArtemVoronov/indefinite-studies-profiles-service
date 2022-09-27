@@ -216,13 +216,18 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	if !app.IsSameUserOrHasOwnerRole(c, *user.Id) {
+	if !app.IsSameUser(c, *user.Id) && !app.HasOwnerRole(c) {
 		c.JSON(http.StatusForbidden, "Forbidden")
 		log.Printf("Forbidden to update user. User ID from body: %v", *user.Id)
 		return
 	}
 
 	if user.State != nil {
+		if !app.HasOwnerRole(c) {
+			c.JSON(http.StatusForbidden, "Forbidden")
+			log.Printf("Forbidden to change user state. User ID from body: %v", *user.Id)
+			return
+		}
 		if *user.State == entities.USER_STATE_DELETED {
 			c.JSON(http.StatusBadRequest, api.DELETE_VIA_PUT_REQUEST_IS_FODBIDDEN)
 			return
@@ -236,6 +241,11 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	if user.Role != nil {
+		if !app.HasOwnerRole(c) {
+			c.JSON(http.StatusForbidden, "Forbidden")
+			log.Printf("Forbidden to change user role. User ID from body: %v", *user.Id)
+			return
+		}
 		possibleUserRoles := entities.GetPossibleUserRoles()
 		if !utils.Contains(possibleUserRoles, *user.Role) {
 			c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to update user. Wrong 'Role' value. Possible values: %v", possibleUserRoles))
@@ -281,7 +291,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if !app.IsSameUserOrHasOwnerRole(c, user.Id) {
+	if !app.IsSameUser(c, user.Id) && !app.HasOwnerRole(c) {
 		c.JSON(http.StatusForbidden, "Forbidden")
 		log.Printf("Forbidden to delete user. User ID from body: %v", user.Id)
 		return
