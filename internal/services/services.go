@@ -8,15 +8,17 @@ import (
 	auth "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/auth"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/feed"
+	notifications "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/notifications"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/whitelist"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 )
 
 type Services struct {
-	auth      *auth.AuthGRPCService
-	db        *db.PostgreSQLService
-	feed      *feed.FeedBuilderGRPCService
-	whitelist *whitelist.WhiteListService
+	auth          *auth.AuthGRPCService
+	db            *db.PostgreSQLService
+	feed          *feed.FeedBuilderGRPCService
+	whitelist     *whitelist.WhiteListService
+	notifications *notifications.NotificationsGRPCService
 }
 
 var once sync.Once
@@ -40,12 +42,17 @@ func createServices() *Services {
 	if err != nil {
 		log.Fatalf("unable to load TLS credentials")
 	}
+	notificationscreds, err := app.LoadTLSCredentialsForClient(utils.EnvVar("NOTIFICATIONS_SERVICE_CLIENT_TLS_CERT_PATH"))
+	if err != nil {
+		log.Fatalf("unable to load TLS credentials")
+	}
 
 	return &Services{
-		auth:      auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST")+":"+utils.EnvVar("AUTH_SERVICE_GRPC_PORT"), &authcreds),
-		feed:      feed.CreateFeedBuilderGRPCService(utils.EnvVar("FEED_SERVICE_GRPC_HOST")+":"+utils.EnvVar("FEED_SERVICE_GRPC_PORT"), &feedcreds),
-		db:        db.CreatePostgreSQLService(),
-		whitelist: whitelist.CreateWhiteListService(utils.EnvVar("APP_WHITE_LIST_PATH")),
+		auth:          auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST")+":"+utils.EnvVar("AUTH_SERVICE_GRPC_PORT"), &authcreds),
+		feed:          feed.CreateFeedBuilderGRPCService(utils.EnvVar("FEED_SERVICE_GRPC_HOST")+":"+utils.EnvVar("FEED_SERVICE_GRPC_PORT"), &feedcreds),
+		db:            db.CreatePostgreSQLService(),
+		whitelist:     whitelist.CreateWhiteListService(utils.EnvVar("APP_WHITE_LIST_PATH")),
+		notifications: notifications.CreatePostsGRPCService(utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_PORT"), &notificationscreds),
 	}
 }
 
@@ -70,4 +77,8 @@ func (s *Services) Feed() *feed.FeedBuilderGRPCService {
 
 func (s *Services) Whitelist() *whitelist.WhiteListService {
 	return s.whitelist
+}
+
+func (s *Services) Notifications() *notifications.NotificationsGRPCService {
+	return s.notifications
 }
