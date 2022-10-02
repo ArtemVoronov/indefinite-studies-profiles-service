@@ -43,7 +43,7 @@ func CheckCredentials(email string, password string) (*CredentialsValidationResu
 		return result, fmt.Errorf("unable to check credentials : %s", api.ERROR_ASSERT_RESULT_TYPE)
 	}
 
-	if isValidPassword(user.Password, password) {
+	if user.State == entities.USER_STATE_CONFRIMED || isValidPassword(user.Password, password) {
 		result = &CredentialsValidationResult{UserId: user.Id, IsValid: true, Role: user.Role}
 	} else {
 		result = &CredentialsValidationResult{UserId: -1, IsValid: false, Role: ""}

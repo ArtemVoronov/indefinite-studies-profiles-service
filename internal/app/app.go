@@ -56,13 +56,16 @@ func createRestApi(logger *logrus.Logger) *gin.Engine {
 	// TODO: move to authorized group and add app.RequiredOwnerRole()
 	v1.POST("/users", users.CreateUser)
 
+	v1.POST("/users/signup", users.SignUpStart)
+	v1.GET("/users/signup/:token", users.SignUpFinish)
+	v1.POST("/users/signup/resend:confirmation", users.ResendConfirmationLink)
+
 	authorized := router.Group("/api/v1")
 	authorized.Use(app.AuthReqired(authenicate))
 	{
 		authorized.GET("/users/debug/vars", app.RequiredOwnerRole(), expvar.Handler())
 		authorized.GET("/users/safe-ping", app.RequiredOwnerRole(), ping.SafePing)
 
-		// TODO: add explicit route for signup
 		// TODO: add explicit route for changing password
 		// TODO: add explicit route for changing email with confirmation
 		// TODO: add explicit route for restoring password

@@ -3,9 +3,10 @@ module github.com/ArtemVoronov/indefinite-studies-profiles-service
 go 1.18
 
 require (
-	github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20221002091612-2727031317b1
+	github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20221002140500-6aa551c6ed86
 	github.com/gin-contrib/expvar v0.0.1
 	github.com/gin-gonic/gin v1.8.1
+	github.com/google/uuid v1.3.0
 	github.com/lib/pq v1.10.6
 	github.com/sirupsen/logrus v1.9.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
@@ -14,6 +15,7 @@ require (
 )
 
 require (
+	github.com/confluentinc/confluent-kafka-go v1.9.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect

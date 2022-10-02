@@ -35,8 +35,27 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>        
-        <addUniqueConstraint tableName="users" columnNames="email, state" constraintName="users_email_state_unique" />
+        <createTable tableName="registration_tokens">
+            <column name="user_id" type="int">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="token" type="varchar(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expire_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>            
+            <column name="create_date" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_update_date" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>   
+        <addUniqueConstraint tableName="users" columnNames="email" constraintName="users_email_unique" />
+        <addUniqueConstraint tableName="registration_tokens" columnNames="token" constraintName="registration_tokens_token_unique" />
         <rollback>         
+            <dropTable tableName="registration_tokens"/>
             <dropTable tableName="users"/>
         </rollback>
     </changeSet>

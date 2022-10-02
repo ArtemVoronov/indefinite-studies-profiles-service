@@ -10,6 +10,7 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/feed"
 	notifications "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/notifications"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/subscriptions"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/whitelist"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 )
@@ -20,6 +21,7 @@ type Services struct {
 	feed          *feed.FeedBuilderGRPCService
 	whitelist     *whitelist.WhiteListService
 	notifications *notifications.NotificationsGRPCService
+	subscriptions *subscriptions.SubscriptionsGRPCService
 }
 
 var once sync.Once
@@ -47,6 +49,10 @@ func createServices() *Services {
 	if err != nil {
 		log.Fatalf("unable to load TLS credentials: %s", err)
 	}
+	subscriptionscreds, err := app.LoadTLSCredentialsForClient(utils.EnvVar("SUBSCRIPTIONS_SERVICE_CLIENT_TLS_CERT_PATH"))
+	if err != nil {
+		log.Fatalf("unable to load TLS credentials: %s", err)
+	}
 
 	return &Services{
 		auth:          auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST")+":"+utils.EnvVar("AUTH_SERVICE_GRPC_PORT"), &authcreds),
@@ -54,6 +60,7 @@ func createServices() *Services {
 		db:            db.CreatePostgreSQLService(),
 		whitelist:     whitelist.CreateWhiteListService(utils.EnvVar("APP_WHITE_LIST_PATH")),
 		notifications: notifications.CreateNotificationsGRPCService(utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_PORT"), &notificationscreds),
+		subscriptions: subscriptions.CreateSubscriptionsGRPCService(utils.EnvVar("SUBSCRIPTIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("SUBSCRIPTIONS_SERVICE_GRPC_PORT"), &subscriptionscreds),
 	}
 }
 
@@ -72,6 +79,14 @@ func (s *Services) Shutdown() error {
 		result = append(result, err)
 	}
 	err = s.whitelist.Shutdown()
+	if err != nil {
+		result = append(result, err)
+	}
+	err = s.notifications.Shutdown()
+	if err != nil {
+		result = append(result, err)
+	}
+	err = s.subscriptions.Shutdown()
 	if err != nil {
 		result = append(result, err)
 	}
@@ -99,4 +114,8 @@ func (s *Services) Whitelist() *whitelist.WhiteListService {
 
 func (s *Services) Notifications() *notifications.NotificationsGRPCService {
 	return s.notifications
+}
+
+func (s *Services) Subscriptions() *subscriptions.SubscriptionsGRPCService {
+	return s.subscriptions
 }
