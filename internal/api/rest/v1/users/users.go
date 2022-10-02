@@ -321,23 +321,6 @@ func DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, api.DONE)
 }
 
-func SendEmail(c *gin.Context) {
-	var dto SendEmailDTO
-	if err := c.ShouldBindJSON(&dto); err != nil {
-		validation.SendError(c, err)
-		return
-	}
-
-	err := services.Instance().Notifications().SendEmail(dto.Sender, dto.Recepient, dto.Body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, "Unable to send email")
-		log.Printf("Unable to send email: %s", err)
-		return
-	}
-
-	c.JSON(http.StatusOK, api.DONE)
-}
-
 func convertUsers(users []entities.User) []UserDTO {
 	if users == nil {
 		return make([]UserDTO, 0)
