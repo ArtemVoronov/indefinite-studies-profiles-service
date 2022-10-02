@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -80,14 +80,14 @@ func GetUsers(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to get users")
-		log.Printf("Unable to get to users : %s", err)
+		log.Error("Unable to get to users", err.Error())
 		return
 	}
 
 	users, ok := data.([]entities.User)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, "Unable to get users")
-		log.Printf("Unable to get to users : %s", api.ERROR_ASSERT_RESULT_TYPE)
+		log.Error("Unable to get to users", api.ERROR_ASSERT_RESULT_TYPE)
 		return
 	}
 
@@ -98,8 +98,8 @@ func GetUsers(c *gin.Context) {
 func GetMyProfile(c *gin.Context) {
 	userId, ok := c.Get(app.CTX_TOKEN_ID_KEY)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, "Internal Server Error")
-		log.Printf("Unauthorized")
+		c.JSON(http.StatusInternalServerError, "Unable to get to user profile")
+		log.Error("Unable to get to user profile", "Missed TOKEN ID in gin context")
 		return
 	}
 
@@ -112,8 +112,8 @@ func GetMyProfile(c *gin.Context) {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, api.PAGE_NOT_FOUND)
 		} else {
-			c.JSON(http.StatusInternalServerError, "Unable to get user")
-			log.Printf("Unable to get to user : %s", err)
+			c.JSON(http.StatusInternalServerError, "Unable to get to user profile")
+			log.Error("Unable to get to user profile", err.Error())
 		}
 		return
 	}
@@ -121,7 +121,7 @@ func GetMyProfile(c *gin.Context) {
 	user, ok := data.(entities.User)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, "Unable to get users")
-		log.Printf("Unable to get to users : %s", api.ERROR_ASSERT_RESULT_TYPE)
+		log.Error("Unable to get to user profile", api.ERROR_ASSERT_RESULT_TYPE)
 		return
 	}
 
@@ -153,7 +153,7 @@ func GetUser(c *gin.Context) {
 			c.JSON(http.StatusNotFound, api.PAGE_NOT_FOUND)
 		} else {
 			c.JSON(http.StatusInternalServerError, "Unable to get user")
-			log.Printf("Unable to get to user : %s", err)
+			log.Error("Unable to get to user", err.Error())
 		}
 		return
 	}
@@ -161,7 +161,7 @@ func GetUser(c *gin.Context) {
 	user, ok := data.(entities.User)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, "Unable to get users")
-		log.Printf("Unable to get to users : %s", api.ERROR_ASSERT_RESULT_TYPE)
+		log.Error("Unable to get to user", api.ERROR_ASSERT_RESULT_TYPE)
 		return
 	}
 
@@ -191,7 +191,7 @@ func CreateUser(c *gin.Context) {
 	hashPassword, err := credentials.HashPassword(user.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to create user")
-		log.Printf("Unable to create user : %s", err)
+		log.Error("Unable to create user", err.Error())
 		return
 	}
 	user.Password = hashPassword
@@ -206,7 +206,7 @@ func CreateUser(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, api.DUPLICATE_FOUND)
 		} else {
 			c.JSON(http.StatusInternalServerError, "Unable to create user")
-			log.Printf("Unable to create user : %s", err)
+			log.Error("Unable to create user", err.Error())
 		}
 		return
 	}
@@ -224,14 +224,14 @@ func UpdateUser(c *gin.Context) {
 
 	if !app.IsSameUser(c, *user.Id) && !app.HasOwnerRole(c) {
 		c.JSON(http.StatusForbidden, "Forbidden")
-		log.Printf("Forbidden to update user. User ID from body: %v", *user.Id)
+		log.Info(fmt.Sprintf("Forbidden to update user. User ID from body: %v", *user.Id))
 		return
 	}
 
 	if user.State != nil {
 		if !app.HasOwnerRole(c) {
 			c.JSON(http.StatusForbidden, "Forbidden")
-			log.Printf("Forbidden to change user state. User ID from body: %v", *user.Id)
+			log.Info(fmt.Sprintf("Forbidden to update user state. User ID from body: %v", *user.Id))
 			return
 		}
 		if *user.State == entities.USER_STATE_DELETED {
@@ -249,7 +249,7 @@ func UpdateUser(c *gin.Context) {
 	if user.Role != nil {
 		if !app.HasOwnerRole(c) {
 			c.JSON(http.StatusForbidden, "Forbidden")
-			log.Printf("Forbidden to change user role. User ID from body: %v", *user.Id)
+			log.Info(fmt.Sprintf("Forbidden to update user role. User ID from body: %v", *user.Id))
 			return
 		}
 		possibleUserRoles := entities.GetPossibleUserRoles()
@@ -263,7 +263,7 @@ func UpdateUser(c *gin.Context) {
 		hashPassword, err := credentials.HashPassword(*user.Password)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, "Unable to update user")
-			log.Printf("Unable to update user : %s", err)
+			log.Error("Unable to update user", err.Error())
 			return
 		}
 		user.Password = &hashPassword
@@ -282,7 +282,7 @@ func UpdateUser(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, api.DUPLICATE_FOUND)
 		} else {
 			c.JSON(http.StatusInternalServerError, "Unable to update user")
-			log.Printf("Unable to update user : %s", err)
+			log.Error("Unable to update user", err.Error())
 		}
 		return
 	}
@@ -299,7 +299,7 @@ func DeleteUser(c *gin.Context) {
 
 	if !app.IsSameUser(c, user.Id) && !app.HasOwnerRole(c) {
 		c.JSON(http.StatusForbidden, "Forbidden")
-		log.Printf("Forbidden to delete user. User ID from body: %v", user.Id)
+		log.Info(fmt.Sprintf("Forbidden to delete user. User ID from body: %v", user.Id))
 		return
 	}
 
@@ -313,7 +313,7 @@ func DeleteUser(c *gin.Context) {
 			c.JSON(http.StatusNotFound, api.PAGE_NOT_FOUND)
 		} else {
 			c.JSON(http.StatusInternalServerError, "Unable to delete user")
-			log.Printf("Unable to delete user: %s", err)
+			log.Error("Unable to delete user", err.Error())
 		}
 		return
 	}

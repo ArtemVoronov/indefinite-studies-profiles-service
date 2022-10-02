@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/credentials"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/queries"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/profiles"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"google.golang.org/grpc"
@@ -52,8 +52,7 @@ func (s *ProfilesServiceServer) GetUser(ctx context.Context, in *profiles.GetUse
 
 	user, ok := data.(entities.User)
 	if !ok {
-		log.Printf("Unable to get to user : %s", api.ERROR_ASSERT_RESULT_TYPE)
-
+		log.Error("Unable to get to user", api.ERROR_ASSERT_RESULT_TYPE)
 		return &profiles.GetUserReply{}, err
 	}
 
@@ -86,8 +85,7 @@ func (s *ProfilesServiceServer) GetUsers(ctx context.Context, in *profiles.GetUs
 
 	users, ok := data.([]entities.User)
 	if !ok {
-		log.Printf("Unable to get to user : %s", api.ERROR_ASSERT_RESULT_TYPE)
-
+		log.Error("Unable to get to users", api.ERROR_ASSERT_RESULT_TYPE)
 		return &profiles.GetUsersReply{}, err
 	}
 
