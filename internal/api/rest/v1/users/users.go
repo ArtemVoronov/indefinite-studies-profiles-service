@@ -16,6 +16,7 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
 	userRoles "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db/entities"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/feed"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -36,7 +37,7 @@ type UserListDTO struct {
 }
 
 type UserEditDTO struct {
-	Id       *int    `json:"Id" binding:"required"`
+	Id       int     `json:"Id" binding:"required"`
 	Login    *string `json:"Login,omitempty"`
 	Email    *string `json:"Email,omitempty"`
 	Password *string `json:"Password,omitempty"`
@@ -230,16 +231,16 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	if !app.IsSameUser(c, *user.Id) && !app.HasOwnerRole(c) {
+	if !app.IsSameUser(c, user.Id) && !app.HasOwnerRole(c) {
 		c.JSON(http.StatusForbidden, "Forbidden")
-		log.Info(fmt.Sprintf("Forbidden to update user. User ID from body: %v", *user.Id))
+		log.Info(fmt.Sprintf("Forbidden to update user. User ID from body: %v", user.Id))
 		return
 	}
 
 	if user.State != nil {
 		if !app.HasOwnerRole(c) {
 			c.JSON(http.StatusForbidden, "Forbidden")
-			log.Info(fmt.Sprintf("Forbidden to update user state. User ID from body: %v", *user.Id))
+			log.Info(fmt.Sprintf("Forbidden to update user state. User ID from body: %v", user.Id))
 			return
 		}
 		if *user.State == entities.USER_STATE_DELETED {
@@ -258,7 +259,7 @@ func UpdateUser(c *gin.Context) {
 	if user.Email != nil {
 		if !app.HasOwnerRole(c) {
 			c.JSON(http.StatusForbidden, "Forbidden")
-			log.Info(fmt.Sprintf("Forbidden to update user email. User ID from body: %v", *user.Id))
+			log.Info(fmt.Sprintf("Forbidden to update user email. User ID from body: %v", user.Id))
 			return
 		}
 	}
@@ -266,7 +267,7 @@ func UpdateUser(c *gin.Context) {
 	if user.Role != nil {
 		if !app.HasOwnerRole(c) {
 			c.JSON(http.StatusForbidden, "Forbidden")
-			log.Info(fmt.Sprintf("Forbidden to update user role. User ID from body: %v", *user.Id))
+			log.Info(fmt.Sprintf("Forbidden to update user role. User ID from body: %v", user.Id))
 			return
 		}
 		possibleUserRoles := entities.GetPossibleUserRoles()
@@ -308,7 +309,35 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
+	err = services.Instance().Feed().UpdateUser(toFeedUserDTO(&user))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "Unable to update user")
+		log.Error("Unable to update user at feed service", err.Error())
+		return
+	}
+
 	c.JSON(http.StatusOK, api.DONE)
+}
+
+func toFeedUserDTO(user *UserEditDTO) *feed.FeedUserDTO {
+	result := &feed.FeedUserDTO{
+		Id: int32(user.Id),
+	}
+
+	if user.Login != nil {
+		result.Login = *user.Login
+	}
+	if user.Email != nil {
+		result.Email = *user.Email
+	}
+	if user.Role != nil {
+		result.Role = *user.Role
+	}
+	if user.State != nil {
+		result.State = *user.State
+	}
+
+	return result
 }
 
 func DeleteUser(c *gin.Context) {
