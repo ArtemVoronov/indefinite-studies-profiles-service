@@ -24,9 +24,9 @@ func Start() {
 	log.SetUpLogPath(utils.EnvVarDefault("APP_LOGS_PATH", "stdout"))
 	creds := app.TLSCredentials()
 	go func() {
-		app.StartGRPC(setup, shutdown, app.HostGRPC(), createGrpcApi, &creds, log.Log)
+		app.StartGRPC(setup, shutdown, app.HostGRPC(), createGrpcApi, &creds, log.Instance())
 	}()
-	app.StartHTTP(setup, shutdown, app.HostHTTP(), createRestApi(log.Log))
+	app.StartHTTP(setup, shutdown, app.HostHTTP(), createRestApi(log.Instance()))
 }
 
 func setup() {
@@ -53,9 +53,13 @@ func createRestApi(logger *logrus.Logger) *gin.Engine {
 	v1 := router.Group("/api/v1")
 
 	v1.GET("/users/ping", ping.Ping)
+
 	v1.POST("/users/signup", users.SignUpStart)
-	v1.GET("/users/signup/:token", users.SignUpFinish)
-	v1.POST("/users/signup/resend:confirmation", users.ResendConfirmationLink)
+	v1.PUT("/users/signup", users.SignUpFinish)
+	v1.POST("/users/signup/resend", users.ResendConfirmationLink)
+
+	v1.POST("/users/password/restore", users.RestorePasswordStart)
+	v1.PUT("/users/password/restore", users.RestorePasswordFinish)
 
 	authorized := router.Group("/api/v1")
 	authorized.Use(app.AuthReqired(authenicate))
@@ -63,9 +67,7 @@ func createRestApi(logger *logrus.Logger) *gin.Engine {
 		authorized.GET("/users/debug/vars", app.RequiredOwnerRole(), expvar.Handler())
 		authorized.GET("/users/safe-ping", app.RequiredOwnerRole(), ping.SafePing)
 
-		// TODO: add explicit route for changing password
 		// TODO: add explicit route for changing email with confirmation
-		// TODO: add explicit route for restoring password
 
 		authorized.GET("/users", app.RequiredOwnerRole(), users.GetUsers)
 		authorized.GET("/users/:id", app.RequiredOwnerRole(), users.GetUser)

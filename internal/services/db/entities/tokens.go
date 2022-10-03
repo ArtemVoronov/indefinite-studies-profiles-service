@@ -9,3 +9,11 @@ type RegistrationToken struct {
 	CreateDate     time.Time
 	LastUpdateDate time.Time
 }
+
+type RestorePasswordToken struct {
+	UserId         int
+	Token          string
+	ExpireAt       time.Time
+	CreateDate     time.Time
+	LastUpdateDate time.Time
+}
