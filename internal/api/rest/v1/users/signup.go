@@ -14,7 +14,6 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
-	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/kafka"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -108,19 +107,7 @@ func SignUpStart(c *gin.Context) {
 }
 
 func sendEmailWithSignUpConfirmationLink(email string, token string) error {
-	// TODO: use config for link and email generation (appropriate domain name, https, path for link and sender, subject, body for email)
-	link := "http://localhost/api/v1/users/signup/" + token
-
-	sendEmailEvent := kafka.SendEmailEvent{
-		Sender:    "no-reply@indefinitestudies.ru",
-		Recepient: email,
-		Subject:   "Registration at indefinitestudies.ru",
-		Body:      "Welcome!\n\nUse the following link for finishing registration: " + link + "\n\nBest Regards,\nIndefinite Studies Team",
-	}
-
-	// TODO: clean
-	log.Info(fmt.Sprintf("sending email %v", sendEmailEvent))
-
+	sendEmailEvent := services.Instance().Templates().GetEmailSignUpConfirmationLink(email, token)
 	return services.Instance().Subscriptions().PutSendEmailEvent(sendEmailEvent)
 }
 

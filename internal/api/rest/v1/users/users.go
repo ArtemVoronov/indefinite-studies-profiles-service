@@ -254,6 +254,15 @@ func UpdateUser(c *gin.Context) {
 		}
 	}
 
+	// TODO: add confirmation flow for chaning emails
+	if user.Email != nil {
+		if !app.HasOwnerRole(c) {
+			c.JSON(http.StatusForbidden, "Forbidden")
+			log.Info(fmt.Sprintf("Forbidden to update user email. User ID from body: %v", *user.Id))
+			return
+		}
+	}
+
 	if user.Role != nil {
 		if !app.HasOwnerRole(c) {
 			c.JSON(http.StatusForbidden, "Forbidden")

@@ -3,7 +3,6 @@ package users
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
-	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/kafka"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -166,18 +164,6 @@ func RestorePasswordFinish(c *gin.Context) {
 }
 
 func sendEmailWithRestorePasswordConfirmationLink(email string, token string) error {
-	// TODO: use config for link and email generation (appropriate domain name, https, path for link and sender, subject, body for email)
-	link := "http://localhost/restorepwd/" + token
-
-	sendEmailEvent := kafka.SendEmailEvent{
-		Sender:    "no-reply@indefinitestudies.ru",
-		Recepient: email,
-		Subject:   "Restore password",
-		Body:      "Hello!\n\nUse the following link for restoring password: " + link + "\n\nBest Regards,\nIndefinite Studies Team",
-	}
-
-	// TODO: clean
-	log.Info(fmt.Sprintf("sending email %v", sendEmailEvent))
-
+	sendEmailEvent := services.Instance().Templates().GetEmailRestorePasswordLink(email, token)
 	return services.Instance().Subscriptions().PutSendEmailEvent(sendEmailEvent)
 }

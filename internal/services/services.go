@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/templates"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
 	auth "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/auth"
@@ -22,6 +23,7 @@ type Services struct {
 	whitelist     *whitelist.WhiteListService
 	notifications *notifications.NotificationsGRPCService
 	subscriptions *subscriptions.SubscriptionsGRPCService
+	templates     *templates.EmailTemplateService
 }
 
 var once sync.Once
@@ -61,6 +63,7 @@ func createServices() *Services {
 		whitelist:     whitelist.CreateWhiteListService(utils.EnvVar("APP_WHITE_LIST_PATH")),
 		notifications: notifications.CreateNotificationsGRPCService(utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_PORT"), &notificationscreds),
 		subscriptions: subscriptions.CreateSubscriptionsGRPCService(utils.EnvVar("SUBSCRIPTIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("SUBSCRIPTIONS_SERVICE_GRPC_PORT"), &subscriptionscreds),
+		templates:     templates.NewEmailTemplateService(utils.EnvVar("TEAMPLTES_SERVICE_BASE_URL"), utils.EnvVar("TEAMPLTES_SERVICE_SENDER_EMAIL")),
 	}
 }
 
@@ -87,6 +90,10 @@ func (s *Services) Shutdown() error {
 		result = append(result, err)
 	}
 	err = s.subscriptions.Shutdown()
+	if err != nil {
+		result = append(result, err)
+	}
+	err = s.templates.Shutdown()
 	if err != nil {
 		result = append(result, err)
 	}
@@ -118,4 +125,8 @@ func (s *Services) Notifications() *notifications.NotificationsGRPCService {
 
 func (s *Services) Subscriptions() *subscriptions.SubscriptionsGRPCService {
 	return s.subscriptions
+}
+
+func (s *Services) Templates() *templates.EmailTemplateService {
+	return s.templates
 }
