@@ -18,6 +18,7 @@ type CreateUserParams struct {
 	Email    interface{}
 	Password interface{}
 	Role     interface{}
+	State    interface{}
 }
 
 type UpdateUserParams struct {
@@ -176,7 +177,7 @@ func CreateUser(tx *sql.Tx, ctx context.Context, params *CreateUserParams) (int,
 	lastUpdateDate := time.Now()
 
 	err := tx.QueryRowContext(ctx, CREATE_USER_QUERY,
-		params.Login, params.Email, params.Password, params.Role, entities.USER_STATE_NEW, createDate, lastUpdateDate).
+		params.Login, params.Email, params.Password, params.Role, params.State, createDate, lastUpdateDate).
 		Scan(&lastInsertId) // scan will release the connection
 	if err != nil {
 		if err.Error() == ErrorUserDuplicateKey.Error() {

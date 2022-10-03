@@ -52,6 +52,7 @@ type UserCreateDTO struct {
 	Email    string `json:"Email" binding:"required,email"`
 	Password string `json:"Password" binding:"required"`
 	Role     string `json:"Role" binding:"required"`
+	State    string `json:"State" binding:"required"`
 }
 
 type UserDeleteDTO struct {
@@ -181,15 +182,15 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	isAllowed := services.Instance().Whitelist().Contains(user.Email)
-	if !isAllowed {
-		c.JSON(http.StatusForbidden, "Forbidden")
-		return
-	}
-
 	possibleUserRoles := entities.GetPossibleUserRoles()
 	if !utils.Contains(possibleUserRoles, user.Role) {
 		c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to create user. Wrong 'Role' value. Possible values: %v", possibleUserRoles))
+		return
+	}
+
+	possibleUseStates := entities.GetPossibleUserStates()
+	if !utils.Contains(possibleUseStates, user.State) {
+		c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to create user. Wrong 'State' value. Possible values: %v", possibleUseStates))
 		return
 	}
 
@@ -379,13 +380,19 @@ func toCreateUserParams(dto any) (*queries.CreateUserParams, error) {
 			Email:    t.Email,
 			Password: t.Password,
 			Role:     t.Role,
+			State:    t.State,
 		}, nil
 	case *SignUpStartDTO:
+		role := userRoles.USER_ROLE_GI
+		if services.Instance().Whitelist().Contains(t.Email) {
+			role = userRoles.USER_ROLE_OWNER
+		}
 		return &queries.CreateUserParams{
 			Login:    t.Login,
 			Email:    t.Email,
 			Password: t.Password,
-			Role:     userRoles.USER_ROLE_GI,
+			Role:     role,
+			State:    entities.USER_STATE_NEW,
 		}, nil
 	default:
 		return nil, fmt.Errorf("unkown type: %T", t)

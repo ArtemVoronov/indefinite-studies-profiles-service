@@ -53,9 +53,6 @@ func createRestApi(logger *logrus.Logger) *gin.Engine {
 	v1 := router.Group("/api/v1")
 
 	v1.GET("/users/ping", ping.Ping)
-	// TODO: move to authorized group and add app.RequiredOwnerRole()
-	v1.POST("/users", users.CreateUser)
-
 	v1.POST("/users/signup", users.SignUpStart)
 	v1.GET("/users/signup/:token", users.SignUpFinish)
 	v1.POST("/users/signup/resend:confirmation", users.ResendConfirmationLink)
@@ -73,6 +70,7 @@ func createRestApi(logger *logrus.Logger) *gin.Engine {
 		authorized.GET("/users", app.RequiredOwnerRole(), users.GetUsers)
 		authorized.GET("/users/:id", app.RequiredOwnerRole(), users.GetUser)
 		authorized.GET("/users/me", users.GetMyProfile)
+		authorized.POST("/users", app.RequiredOwnerRole(), users.CreateUser)
 		authorized.PUT("/users", users.UpdateUser)
 		authorized.DELETE("/users", users.DeleteUser)
 	}
