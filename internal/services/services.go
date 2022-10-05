@@ -63,7 +63,7 @@ func createServices() *Services {
 		whitelist:     whitelist.CreateWhiteListService(utils.EnvVar("APP_WHITE_LIST_PATH")),
 		notifications: notifications.CreateNotificationsGRPCService(utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_PORT"), &notificationscreds),
 		subscriptions: subscriptions.CreateSubscriptionsGRPCService(utils.EnvVar("SUBSCRIPTIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("SUBSCRIPTIONS_SERVICE_GRPC_PORT"), &subscriptionscreds),
-		templates:     templates.NewEmailTemplateService(utils.EnvVar("TEAMPLTES_SERVICE_BASE_URL"), utils.EnvVar("TEAMPLTES_SERVICE_SENDER_EMAIL")),
+		templates:     templates.NewEmailTemplateService(utils.EnvVar("TEMPLATES_SERVICE_BASE_URL"), utils.EnvVar("TEMPLATES_SERVICE_SENDER_EMAIL")),
 	}
 }
 
