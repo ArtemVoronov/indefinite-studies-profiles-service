@@ -219,7 +219,7 @@ func DeleteUser(tx *sql.Tx, ctx context.Context, id int) error {
 	if err != nil {
 		return fmt.Errorf("error at deleting user, case after preparing statement: %v", err)
 	}
-	res, err := stmt.ExecContext(ctx, id, entities.USER_STATE_DELETED)
+	res, err := stmt.ExecContext(ctx, id)
 	if err != nil {
 		return fmt.Errorf("error at deleting user by id '%v', case after executing statement: %v", id, err)
 	}
