@@ -13,6 +13,9 @@
             <column name="id" type="int" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
+            <column name="uuid" type="varchar(36)">
+                <constraints nullable="false"/>
+            </column>
             <column name="login" type="varchar(256)">
                 <constraints nullable="false"/>
             </column>
@@ -39,7 +42,7 @@
             <column name="user_id" type="int">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="token" type="varchar(36)">
+            <column name="token" type="varchar(100)">
                 <constraints nullable="false"/>
             </column>
             <column name="expire_at" type="timestamp">
@@ -56,7 +59,7 @@
             <column name="user_id" type="int">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="token" type="varchar(36)">
+            <column name="token" type="varchar(100)">
                 <constraints nullable="false"/>
             </column>
             <column name="expire_at" type="timestamp">
@@ -69,6 +72,10 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>   
+        <addUniqueConstraint tableName="users" columnNames="uuid" constraintName="users_uuid_unique" />
+        <sql dbms="postgresql">
+            CREATE INDEX users_uuid_hash_index ON users USING HASH (uuid);
+        </sql>
         <addUniqueConstraint tableName="users" columnNames="email" constraintName="users_email_unique" />
         <addUniqueConstraint tableName="registration_tokens" columnNames="token" constraintName="registration_tokens_token_unique" />
         <addUniqueConstraint tableName="restore_password_tokens" columnNames="token" constraintName="restore_password_tokens_token_unique" />

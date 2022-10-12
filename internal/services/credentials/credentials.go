@@ -1,14 +1,11 @@
 package credentials
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/queries"
-	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,35 +15,26 @@ type CredentialsDTO struct {
 }
 
 type CredentialsValidationResult struct {
-	UserId  int    `json:"userId" binding:"required,email"`
-	IsValid bool   `json:"isValid" binding:"required"`
-	Role    string `json:"role" binding:"required"`
+	UserUuid string `json:"userUuid" binding:"required,email"`
+	IsValid  bool   `json:"isValid" binding:"required"`
+	Role     string `json:"role" binding:"required"`
 }
 
 func CheckCredentials(email string, password string) (*CredentialsValidationResult, error) {
 	var result *CredentialsValidationResult
 
-	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		user, err := queries.GetUserByEmail(tx, ctx, email)
-		return user, err
-	})()
-
+	user, err := services.Instance().Profiles().GetUserByEmail(email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return &CredentialsValidationResult{UserId: -1, IsValid: false, Role: ""}, nil
+			return &CredentialsValidationResult{UserUuid: "", IsValid: false, Role: ""}, nil
 		}
 		return result, fmt.Errorf("unable to check credentials : %s", err)
 	}
 
-	user, ok := data.(entities.User)
-	if !ok {
-		return result, fmt.Errorf("unable to check credentials : %s", api.ERROR_ASSERT_RESULT_TYPE)
-	}
-
 	if user.State == entities.USER_STATE_CONFRIMED && isValidPassword(user.Password, password) {
-		result = &CredentialsValidationResult{UserId: user.Id, IsValid: true, Role: user.Role}
+		result = &CredentialsValidationResult{UserUuid: user.Uuid, IsValid: true, Role: user.Role}
 	} else {
-		result = &CredentialsValidationResult{UserId: -1, IsValid: false, Role: ""}
+		result = &CredentialsValidationResult{UserUuid: "", IsValid: false, Role: ""}
 	}
 
 	return result, nil

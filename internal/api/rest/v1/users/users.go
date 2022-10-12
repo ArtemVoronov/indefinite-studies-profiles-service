@@ -1,7 +1,6 @@
 package users
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -15,14 +14,14 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
-	userRoles "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db/entities"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/feed"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type UserDTO struct {
-	Id    int
+	Uuid  string
 	Login string
 	Email string
 	Role  string
@@ -37,7 +36,7 @@ type UserListDTO struct {
 }
 
 type UserEditDTO struct {
-	Id       int     `json:"Id" binding:"required"`
+	Uuid     string  `json:"Uuid" binding:"required"`
 	Login    *string `json:"Login,omitempty"`
 	Email    *string `json:"Email,omitempty"`
 	Password *string `json:"Password,omitempty"`
@@ -54,7 +53,7 @@ type UserCreateDTO struct {
 }
 
 type UserDeleteDTO struct {
-	Id int `json:"Id" binding:"required"`
+	Uuid string `json:"Uuid" binding:"required"`
 }
 
 type SendEmailDTO struct {
@@ -66,6 +65,7 @@ type SendEmailDTO struct {
 func GetUsers(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "50")
 	offsetStr := c.DefaultQuery("offset", "0")
+	shardStr := c.Query("shard")
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
@@ -77,41 +77,33 @@ func GetUsers(c *gin.Context) {
 		offset = 0
 	}
 
-	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		users, err := queries.GetUsers(tx, ctx, limit, offset)
-		return users, err
-	})()
+	shard, err := strconv.Atoi(shardStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "Missed 'shard' parameter or wrong value")
+		log.Error(fmt.Sprintf("Missed 'shard' parameter or wrong value: %v", shardStr), err.Error())
+		return
+	}
 
+	list, err := services.Instance().Profiles().GetUsers(offset, limit, shard)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to get users")
 		log.Error("Unable to get users", err.Error())
 		return
 	}
 
-	users, ok := data.([]entities.User)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, "Unable to get users")
-		log.Error("Unable to get users", api.ERROR_ASSERT_RESULT_TYPE)
-		return
-	}
-
-	result := &UserListDTO{Data: convertUsers(users), Count: len(users), Offset: offset, Limit: limit}
+	result := &UserListDTO{Data: convertUsers(list), Count: len(list), Offset: offset, Limit: limit}
 	c.JSON(http.StatusOK, result)
 }
 
 func GetMyProfile(c *gin.Context) {
-	userId, ok := c.Get(app.CTX_TOKEN_ID_KEY)
+	userUuid, ok := c.Get(app.CTX_TOKEN_ID_KEY)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, "Unable to get to user profile")
 		log.Error("Unable to get user profile", "Missed TOKEN ID in gin context")
 		return
 	}
 
-	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		user, err := queries.GetUser(tx, ctx, userId.(int))
-		return user, err
-	})()
-
+	user, err := services.Instance().Profiles().GetUser(userUuid.(string))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, api.PAGE_NOT_FOUND)
@@ -122,35 +114,18 @@ func GetMyProfile(c *gin.Context) {
 		return
 	}
 
-	user, ok := data.(entities.User)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, "Unable to get users")
-		log.Error("Unable to get user profile", api.ERROR_ASSERT_RESULT_TYPE)
-		return
-	}
-
 	c.JSON(http.StatusOK, convertUser(user))
 }
 
 func GetUser(c *gin.Context) {
-	userIdStr := c.Param("id")
+	userUuid := c.Param("uuid")
 
-	if userIdStr == "" {
-		c.JSON(http.StatusBadRequest, "Missed ID")
+	if userUuid == "" {
+		c.JSON(http.StatusBadRequest, "Missed 'uuid' parameted")
 		return
 	}
 
-	var userId int
-	var parseErr error
-	if userId, parseErr = strconv.Atoi(userIdStr); parseErr != nil {
-		c.JSON(http.StatusBadRequest, api.ERROR_ID_WRONG_FORMAT)
-		return
-	}
-
-	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		user, err := queries.GetUser(tx, ctx, userId)
-		return user, err
-	})()
+	user, err := services.Instance().Profiles().GetUser(userUuid)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -162,57 +137,59 @@ func GetUser(c *gin.Context) {
 		return
 	}
 
-	user, ok := data.(entities.User)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, "Unable to get users")
-		log.Error("Unable to get user", api.ERROR_ASSERT_RESULT_TYPE)
-		return
-	}
-
 	c.JSON(http.StatusOK, convertUser(user))
 }
 
 func CreateUser(c *gin.Context) {
-	var user UserCreateDTO
+	var dto UserCreateDTO
 
-	if err := c.ShouldBindJSON(&user); err != nil {
+	if err := c.ShouldBindJSON(&dto); err != nil {
 		validation.SendError(c, err)
 		return
 	}
 
 	possibleUserRoles := entities.GetPossibleUserRoles()
-	if !utils.Contains(possibleUserRoles, user.Role) {
+	if !utils.Contains(possibleUserRoles, dto.Role) {
 		c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to create user. Wrong 'Role' value. Possible values: %v", possibleUserRoles))
 		return
 	}
 
 	possibleUseStates := entities.GetPossibleUserStates()
-	if !utils.Contains(possibleUseStates, user.State) {
+	if !utils.Contains(possibleUseStates, dto.State) {
 		c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to create user. Wrong 'State' value. Possible values: %v", possibleUseStates))
 		return
 	}
 
-	hashPassword, err := credentials.HashPassword(user.Password)
+	hashPassword, err := credentials.HashPassword(dto.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to create user")
 		log.Error("Unable to create user", err.Error())
 		return
 	}
-	user.Password = hashPassword
+	dto.Password = hashPassword
 
-	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		params, err := toCreateUserParams(&user)
-		if err != nil {
-			return nil, err
-		}
-		result, err := queries.CreateUser(tx, ctx, params)
-		return result, err
-	})()
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "Unable to create user")
+		log.Error("unable to create uuid for user", err.Error())
+		return
+	}
 
-	if err != nil || data == -1 {
+	userUuid := uuid.String()
+
+	userId, err := services.Instance().Profiles().CreateUser(userUuid, dto.Login, dto.Email, dto.Password, dto.Role, dto.State)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "Unable to create user")
+		log.Error("Unable to create user", err.Error())
+		return
+	}
+
+	log.Info(fmt.Sprintf("Created user. Id: %v. Uuid: %v", userId, userUuid))
+
+	if err != nil {
 		if err.Error() == queries.ErrorUserDuplicateKey.Error() {
 			c.JSON(http.StatusBadRequest, api.DUPLICATE_FOUND)
-			log.Error("unable to create user", "duplicate user email: "+user.Email)
+			log.Error("unable to create user", "duplicate user email: "+dto.Email)
 		} else {
 			c.JSON(http.StatusInternalServerError, "Unable to create user")
 			log.Error("Unable to create user", err.Error())
@@ -220,88 +197,80 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, data)
+	c.JSON(http.StatusCreated, userUuid)
 }
 
 func UpdateUser(c *gin.Context) {
-	var user UserEditDTO
+	var dto UserEditDTO
 
-	if err := c.ShouldBindJSON(&user); err != nil {
+	if err := c.ShouldBindJSON(&dto); err != nil {
 		validation.SendError(c, err)
 		return
 	}
 
-	if !app.IsSameUser(c, user.Id) && !app.HasOwnerRole(c) {
+	if !app.IsSameUser(c, dto.Uuid) && !app.HasOwnerRole(c) {
 		c.JSON(http.StatusForbidden, "Forbidden")
-		log.Info(fmt.Sprintf("Forbidden to update user. User ID from body: %v", user.Id))
+		log.Info(fmt.Sprintf("Forbidden to update user. User Uuid from body: %v", dto.Uuid))
 		return
 	}
 
-	if user.State != nil {
+	if dto.State != nil {
 		if !app.HasOwnerRole(c) {
 			c.JSON(http.StatusForbidden, "Forbidden")
-			log.Info(fmt.Sprintf("Forbidden to update user state. User ID from body: %v", user.Id))
+			log.Info(fmt.Sprintf("Forbidden to update user state. User Uuid from body: %v", dto.Uuid))
 			return
 		}
-		if *user.State == entities.USER_STATE_DELETED {
+		if *dto.State == entities.USER_STATE_DELETED {
 			c.JSON(http.StatusBadRequest, api.DELETE_VIA_PUT_REQUEST_IS_FODBIDDEN)
 			return
 		}
 
 		possibleUserStates := entities.GetPossibleUserStates()
-		if !utils.Contains(possibleUserStates, *user.State) {
+		if !utils.Contains(possibleUserStates, *dto.State) {
 			c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to update user. Wrong 'State' value. Possible values: %v", possibleUserStates))
 			return
 		}
 	}
 
-	// TODO: add confirmation flow for chaning emails
-	if user.Email != nil {
+	// TODO: add confirmation flow for changing emails
+	if dto.Email != nil {
 		if !app.HasOwnerRole(c) {
 			c.JSON(http.StatusForbidden, "Forbidden")
-			log.Info(fmt.Sprintf("Forbidden to update user email. User ID from body: %v", user.Id))
+			log.Info(fmt.Sprintf("Forbidden to update user email. User Uuid from body: %v", dto.Uuid))
 			return
 		}
 	}
 
-	if user.Role != nil {
+	if dto.Role != nil {
 		if !app.HasOwnerRole(c) {
 			c.JSON(http.StatusForbidden, "Forbidden")
-			log.Info(fmt.Sprintf("Forbidden to update user role. User ID from body: %v", user.Id))
+			log.Info(fmt.Sprintf("Forbidden to update user role. User Uuid from body: %v", dto.Uuid))
 			return
 		}
 		possibleUserRoles := entities.GetPossibleUserRoles()
-		if !utils.Contains(possibleUserRoles, *user.Role) {
+		if !utils.Contains(possibleUserRoles, *dto.Role) {
 			c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to update user. Wrong 'Role' value. Possible values: %v", possibleUserRoles))
 			return
 		}
 	}
 
-	if user.Password != nil {
-		hashPassword, err := credentials.HashPassword(*user.Password)
+	if dto.Password != nil {
+		hashPassword, err := credentials.HashPassword(*dto.Password)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, "Unable to update user")
 			log.Error("Unable to update user", err.Error())
 			return
 		}
-		user.Password = &hashPassword
+		dto.Password = &hashPassword
 	}
 
-	err := services.Instance().DB().TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
-		params, err := toUpdateUserParams(&user)
-		if err != nil {
-			return err
-		}
-		err = queries.UpdateUser(tx, ctx, params)
-		return err
-	})()
-
+	err := services.Instance().Profiles().UpdateUser(dto.Uuid, dto.Login, dto.Email, dto.Password, dto.Role, dto.State)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, api.PAGE_NOT_FOUND)
 		} else if err.Error() == queries.ErrorUserDuplicateKey.Error() {
 			c.JSON(http.StatusBadRequest, api.DUPLICATE_FOUND)
-			log.Error("unable to update user", "duplicate user email: "+*user.Email)
+			log.Error("unable to update user", "duplicate user email: "+*dto.Email)
 		} else {
 			c.JSON(http.StatusInternalServerError, "Unable to update user")
 			log.Error("Unable to update user", err.Error())
@@ -309,7 +278,9 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	err = services.Instance().Feed().UpdateUser(toFeedUserDTO(&user))
+	log.Info(fmt.Sprintf("Updated user. Uuid: %v", dto.Uuid))
+
+	err = services.Instance().Feed().UpdateUser(toFeedUserDTO(&dto))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to update user")
 		log.Error("Unable to update user at feed service", err.Error())
@@ -321,7 +292,7 @@ func UpdateUser(c *gin.Context) {
 
 func toFeedUserDTO(user *UserEditDTO) *feed.FeedUserDTO {
 	result := &feed.FeedUserDTO{
-		Id: int32(user.Id),
+		Uuid: user.Uuid,
 	}
 
 	if user.Login != nil {
@@ -341,23 +312,19 @@ func toFeedUserDTO(user *UserEditDTO) *feed.FeedUserDTO {
 }
 
 func DeleteUser(c *gin.Context) {
-	var user UserDeleteDTO
-	if err := c.ShouldBindJSON(&user); err != nil {
+	var dto UserDeleteDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
 		validation.SendError(c, err)
 		return
 	}
 
-	if !app.IsSameUser(c, user.Id) && !app.HasOwnerRole(c) {
+	if !app.IsSameUser(c, dto.Uuid) && !app.HasOwnerRole(c) {
 		c.JSON(http.StatusForbidden, "Forbidden")
-		log.Info(fmt.Sprintf("Forbidden to delete user. User ID from body: %v", user.Id))
+		log.Info(fmt.Sprintf("Forbidden to delete user. User ID from body: %v", dto.Id))
 		return
 	}
 
-	err := services.Instance().DB().TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
-		err := queries.DeleteUser(tx, ctx, user.Id)
-		return err
-	})()
-
+	err := services.Instance().Profiles().DeleteUser(dto.Uuid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, api.PAGE_NOT_FOUND)
@@ -383,58 +350,5 @@ func convertUsers(users []entities.User) []UserDTO {
 }
 
 func convertUser(user entities.User) UserDTO {
-	return UserDTO{Id: user.Id, Login: user.Login, Email: user.Email, Role: user.Role, State: user.State}
-}
-
-func toUpdateUserParams(dto any) (*queries.UpdateUserParams, error) {
-	switch t := dto.(type) {
-	case *UserEditDTO:
-		return &queries.UpdateUserParams{
-			Id:       t.Id,
-			Login:    t.Login,
-			Email:    t.Email,
-			Password: t.Password,
-			Role:     t.Role,
-			State:    t.State,
-		}, nil
-	case *entities.RegistrationToken:
-		return &queries.UpdateUserParams{
-			Id:    t.UserId,
-			State: entities.USER_STATE_CONFRIMED,
-		}, nil
-	case *UpdateUserPasswordDTO:
-		return &queries.UpdateUserParams{
-			Id:       t.UserId,
-			Password: t.Password,
-		}, nil
-	default:
-		return nil, fmt.Errorf("unkown type: %T", t)
-	}
-}
-
-func toCreateUserParams(dto any) (*queries.CreateUserParams, error) {
-	switch t := dto.(type) {
-	case *UserCreateDTO:
-		return &queries.CreateUserParams{
-			Login:    t.Login,
-			Email:    t.Email,
-			Password: t.Password,
-			Role:     t.Role,
-			State:    t.State,
-		}, nil
-	case *SignUpStartDTO:
-		role := userRoles.USER_ROLE_GI
-		if services.Instance().Whitelist().Contains(t.Email) {
-			role = userRoles.USER_ROLE_OWNER
-		}
-		return &queries.CreateUserParams{
-			Login:    t.Login,
-			Email:    t.Email,
-			Password: t.Password,
-			Role:     role,
-			State:    entities.USER_STATE_NEW,
-		}, nil
-	default:
-		return nil, fmt.Errorf("unkown type: %T", t)
-	}
+	return UserDTO{Uuid: user.Uuid, Login: user.Login, Email: user.Email, Role: user.Role, State: user.State}
 }

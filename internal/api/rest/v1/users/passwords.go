@@ -1,7 +1,6 @@
 package users
 
 import (
-	"context"
 	"database/sql"
 	"net/http"
 	"time"
@@ -10,11 +9,11 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/credentials"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/queries"
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/tokens"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type RestorePasswordStartDTO struct {
@@ -26,11 +25,6 @@ type RestorePasswordFinishdDTO struct {
 	Password string `json:"Password" binding:"required"`
 }
 
-type UpdateUserPasswordDTO struct {
-	UserId   int    `json:"UserId" binding:"required"`
-	Password string `json:"Password" binding:"required"`
-}
-
 func RestorePasswordStart(c *gin.Context) {
 	var dto RestorePasswordStartDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
@@ -38,11 +32,7 @@ func RestorePasswordStart(c *gin.Context) {
 		return
 	}
 
-	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		user, err := queries.GetUserByEmail(tx, ctx, dto.Email)
-		return user, err
-	})()
-
+	user, err := services.Instance().Profiles().GetUserByEmail(dto.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, api.PAGE_NOT_FOUND)
@@ -53,38 +43,25 @@ func RestorePasswordStart(c *gin.Context) {
 		return
 	}
 
-	user, ok := data.(entities.User)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, "Unable to restore password")
-		log.Error("Unable to restore password", api.ERROR_ASSERT_RESULT_TYPE)
-		return
-	}
-
 	if user.State == entities.USER_STATE_BLOCKED || user.State == entities.USER_STATE_DELETED {
 		c.JSON(http.StatusBadRequest, "User is blocked")
 		log.Error("Unable to restore password", "User is blocked")
 		return
 	}
 
-	token, err := uuid.NewRandom()
+	token, err := tokens.CreateToken(user.Uuid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to restore password")
 		log.Error("unable to create token for restore password", err.Error())
 		return
 	}
 
-	err = services.Instance().DB().TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
-		err := queries.UpdateRestorePasswordToken(tx, ctx, user.Id, token.String())
-		if err == sql.ErrNoRows {
-			err = queries.CreateRestorePasswordToken(tx, ctx, user.Id, token.String())
-		}
-		return err
-	})()
+	err = services.Instance().Profiles().UpdsertRestorePasswordToken(user.Uuid, user.Id, token)
 
 	if err != nil {
 		if err.Error() == queries.ErrorRegistrationTokenDuplicateKey.Error() {
 			c.JSON(http.StatusInternalServerError, "Unable to restore password")
-			log.Error("unable to restore password", "duplicate token: "+token.String())
+			log.Error("unable to restore password", "duplicate token: "+token)
 		} else {
 			c.JSON(http.StatusInternalServerError, "Unable to restore password")
 			log.Error("unable to restore password", err.Error())
@@ -92,7 +69,7 @@ func RestorePasswordStart(c *gin.Context) {
 		return
 	}
 
-	err = sendEmailWithRestorePasswordConfirmationLink(user.Email, token.String())
+	err = sendEmailWithRestorePasswordConfirmationLink(user.Email, token)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to resend confirmation link")
 		log.Error("unable to send email at resend confirmation link", err.Error())
@@ -108,10 +85,13 @@ func RestorePasswordFinish(c *gin.Context) {
 		return
 	}
 
-	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		user, err := queries.GetRestorePasswordToken(tx, ctx, dto.Token)
-		return user, err
-	})()
+	userUuid, err := tokens.ExtractUserUuid(dto.Token)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "Unable to restore password")
+		log.Error("Unable to extract user uuid from restore password token", err.Error())
+	}
+
+	restorePasswordToken, err := services.Instance().Profiles().GetRestorePasswordToken(userUuid, dto.Token)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -120,13 +100,6 @@ func RestorePasswordFinish(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, "Unable to restore password")
 			log.Error("Unable to get restore password token", err.Error())
 		}
-		return
-	}
-
-	restorePasswordToken, ok := data.(entities.RestorePasswordToken)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, "Unable to restore password")
-		log.Error("Unable to get restore password token", api.ERROR_ASSERT_RESULT_TYPE)
 		return
 	}
 
@@ -143,17 +116,7 @@ func RestorePasswordFinish(c *gin.Context) {
 		return
 	}
 
-	user := UpdateUserPasswordDTO{UserId: restorePasswordToken.UserId, Password: hashPassword}
-
-	err = services.Instance().DB().TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
-		params, err := toUpdateUserParams(&user)
-		if err != nil {
-			return err
-		}
-		err = queries.UpdateUser(tx, ctx, params)
-		return err
-	})()
-
+	err = services.Instance().Profiles().UpdateUser(userUuid, nil, nil, &hashPassword, nil, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Unable to finish sign up")
 		log.Error("Unable to finish sign up", err.Error())

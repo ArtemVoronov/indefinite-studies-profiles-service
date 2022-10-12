@@ -2,8 +2,10 @@ package services
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 
+	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/profiles"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/templates"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
@@ -11,6 +13,7 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/feed"
 	notifications "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/notifications"
+	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/shard"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/subscriptions"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/whitelist"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
@@ -18,12 +21,12 @@ import (
 
 type Services struct {
 	auth          *auth.AuthGRPCService
-	db            *db.PostgreSQLService
 	feed          *feed.FeedBuilderGRPCService
 	whitelist     *whitelist.WhiteListService
 	notifications *notifications.NotificationsGRPCService
 	subscriptions *subscriptions.SubscriptionsGRPCService
 	templates     *templates.EmailTemplateService
+	profiles      *profiles.ProfilesService
 }
 
 var once sync.Once
@@ -56,14 +59,27 @@ func createServices() *Services {
 		log.Fatalf("unable to load TLS credentials: %s", err)
 	}
 
+	dbClients := []*db.PostgreSQLService{}
+	for i := 1; i <= shard.DEFAULT_BUCKET_FACTOR; i++ {
+		dbConfig := &db.DBParams{
+			Host:         utils.EnvVar("DATABASE_HOST"),
+			Port:         utils.EnvVar("DATABASE_PORT"),
+			Username:     utils.EnvVar("DATABASE_USER"),
+			Password:     utils.EnvVar("DATABASE_PASSWORD"),
+			DatabaseName: utils.EnvVar("DATABASE_NAME_PREFIX") + "_" + strconv.Itoa(i),
+			SslMode:      utils.EnvVar("DATABASE_SSL_MODE"),
+		}
+		dbClients = append(dbClients, db.CreatePostgreSQLService(dbConfig))
+	}
+
 	return &Services{
 		auth:          auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST")+":"+utils.EnvVar("AUTH_SERVICE_GRPC_PORT"), &authcreds),
 		feed:          feed.CreateFeedBuilderGRPCService(utils.EnvVar("FEED_SERVICE_GRPC_HOST")+":"+utils.EnvVar("FEED_SERVICE_GRPC_PORT"), &feedcreds),
-		db:            db.CreatePostgreSQLServiceDefault(),
 		whitelist:     whitelist.CreateWhiteListService(utils.EnvVar("APP_WHITE_LIST_PATH")),
 		notifications: notifications.CreateNotificationsGRPCService(utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_PORT"), &notificationscreds),
 		subscriptions: subscriptions.CreateSubscriptionsGRPCService(utils.EnvVar("SUBSCRIPTIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("SUBSCRIPTIONS_SERVICE_GRPC_PORT"), &subscriptionscreds),
 		templates:     templates.NewEmailTemplateService(utils.EnvVar("TEMPLATES_SERVICE_BASE_URL"), utils.EnvVar("TEMPLATES_SERVICE_SENDER_EMAIL")),
+		profiles:      profiles.CreateProfilesService(dbClients),
 	}
 }
 
@@ -73,7 +89,7 @@ func (s *Services) Shutdown() error {
 	if err != nil {
 		result = append(result, err)
 	}
-	err = s.db.Shutdown()
+	err = s.profiles.Shutdown()
 	if err != nil {
 		result = append(result, err)
 	}
@@ -103,10 +119,6 @@ func (s *Services) Shutdown() error {
 	return nil
 }
 
-func (s *Services) DB() *db.PostgreSQLService {
-	return s.db
-}
-
 func (s *Services) Auth() *auth.AuthGRPCService {
 	return s.auth
 }
@@ -129,4 +141,8 @@ func (s *Services) Subscriptions() *subscriptions.SubscriptionsGRPCService {
 
 func (s *Services) Templates() *templates.EmailTemplateService {
 	return s.templates
+}
+
+func (s *Services) Profiles() *profiles.ProfilesService {
+	return s.profiles
 }

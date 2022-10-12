@@ -73,7 +73,7 @@ func createRestApi(logger *logrus.Logger) *gin.Engine {
 		// TODO: add explicit route for changing email with confirmation
 
 		authorized.GET("/users", app.RequiredOwnerRole(), users.GetUsers)
-		authorized.GET("/users/:id", app.RequiredOwnerRole(), users.GetUser)
+		authorized.GET("/users/:uuid", app.RequiredOwnerRole(), users.GetUser)
 		authorized.GET("/users/me", users.GetMyProfile)
 		authorized.POST("/users", app.RequiredOwnerRole(), users.CreateUser)
 		authorized.PUT("/users", users.UpdateUser)

@@ -14,6 +14,7 @@ import (
 var ErrorUserDuplicateKey = errors.New("pq: duplicate key value violates unique constraint \"users_email_unique\"")
 
 type CreateUserParams struct {
+	Uuid     interface{}
 	Login    interface{}
 	Email    interface{}
 	Password interface{}
@@ -22,7 +23,7 @@ type CreateUserParams struct {
 }
 
 type UpdateUserParams struct {
-	Id       interface{}
+	Uuid     interface{}
 	Login    interface{}
 	Email    interface{}
 	Password interface{}
@@ -32,24 +33,24 @@ type UpdateUserParams struct {
 
 const (
 	GET_USERS_QUERY = `SELECT 
-		id, login, email, password, role, state, create_date, last_update_date
+		id, uuid, login, email, password, role, state, create_date, last_update_date
 	FROM users 
 	WHERE state != $3 
 	LIMIT $1 OFFSET $2`
 
-	GET_USER_QUERY_BY_ID = `SELECT 
-		id, login, email, password, role, state, create_date, last_update_date
+	GET_USER_QUERY_BY_UUID = `SELECT 
+		id, uuid, login, email, password, role, state, create_date, last_update_date
 	FROM users 
-	WHERE id = $1 and state != $2`
+	WHERE uuid = $1 and state != $2`
 
 	GET_USER_QUERY_BY_EMAIL = `SELECT 
-		id, login, email, password, role, state, create_date, last_update_date
+		id, uuid, login, email, password, role, state, create_date, last_update_date
 	FROM users 
 	WHERE email = $1 and state != $2`
 
 	CREATE_USER_QUERY = `INSERT INTO users
-		(login, email, password, role, state, create_date, last_update_date)
-		VALUES($1, $2, $3, $4, $5, $6, $7)
+		(uuid, login, email, password, role, state, create_date, last_update_date)
+		VALUES($1, $2, $3, $4, $5, $6, $7, $8)
 	RETURNING id`
 
 	UPDATE_USER_QUERY = `UPDATE users
@@ -59,12 +60,12 @@ const (
 		role = COALESCE($5, role),
 		state = COALESCE($6, state),
 		last_update_date = $7
-	WHERE id = $1 and state != $8`
+	WHERE uuid = $1 and state != $8`
 
-	DELETE_USER_QUERY = `DELETE from users WHERE id = $1`
+	DELETE_USER_QUERY = `DELETE from users WHERE uuid = $1`
 
 	GET_USERS_BY_IDS_QUERY = `SELECT 
-	id, login, email, password, role, state, create_date, last_update_date
+	id, uuid, login, email, password, role, state, create_date, last_update_date
 	FROM users 
 	WHERE state != $4 AND id = ANY($1)
 	LIMIT $2 OFFSET $3`
@@ -74,6 +75,7 @@ func GetUsers(tx *sql.Tx, ctx context.Context, limit int, offset int) ([]entitie
 	var user []entities.User
 	var (
 		id             int
+		uuid           string
 		login          string
 		email          string
 		password       string
@@ -90,11 +92,11 @@ func GetUsers(tx *sql.Tx, ctx context.Context, limit int, offset int) ([]entitie
 	defer rows.Close()
 
 	for rows.Next() {
-		err := rows.Scan(&id, &login, &email, &password, &role, &state, &createDate, &lastUpdateDate)
+		err := rows.Scan(&id, &uuid, &login, &email, &password, &role, &state, &createDate, &lastUpdateDate)
 		if err != nil {
 			return user, fmt.Errorf("error at loading users from db, case iterating and using rows.Scan: %v", err)
 		}
-		user = append(user, entities.User{Id: id, Login: login, Email: email, Password: password, Role: role, State: state, CreateDate: createDate, LastUpdateDate: lastUpdateDate})
+		user = append(user, entities.User{Id: id, Uuid: uuid, Login: login, Email: email, Password: password, Role: role, State: state, CreateDate: createDate, LastUpdateDate: lastUpdateDate})
 	}
 	err = rows.Err()
 	if err != nil {
@@ -104,16 +106,16 @@ func GetUsers(tx *sql.Tx, ctx context.Context, limit int, offset int) ([]entitie
 	return user, nil
 }
 
-func GetUser(tx *sql.Tx, ctx context.Context, id int) (entities.User, error) {
+func GetUser(tx *sql.Tx, ctx context.Context, uuid string) (entities.User, error) {
 	var user entities.User
 
-	err := tx.QueryRowContext(ctx, GET_USER_QUERY_BY_ID, id, entities.USER_STATE_DELETED).
-		Scan(&user.Id, &user.Login, &user.Email, &user.Password, &user.Role, &user.State, &user.CreateDate, &user.LastUpdateDate)
+	err := tx.QueryRowContext(ctx, GET_USER_QUERY_BY_UUID, uuid, entities.USER_STATE_DELETED).
+		Scan(&user.Id, &user.Uuid, &user.Login, &user.Email, &user.Password, &user.Role, &user.State, &user.CreateDate, &user.LastUpdateDate)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return user, err
 		} else {
-			return user, fmt.Errorf("error at loading user by id '%v' from db, case after QueryRow.Scan: %v", id, err)
+			return user, fmt.Errorf("error at loading user by uuid '%v' from db, case after QueryRow.Scan: %v", uuid, err)
 		}
 	}
 
@@ -124,6 +126,7 @@ func GetUsersByIds(tx *sql.Tx, ctx context.Context, ids []int, limit int, offset
 	var users []entities.User
 	var (
 		id             int
+		uuid           string
 		login          string
 		email          string
 		password       string
@@ -140,11 +143,11 @@ func GetUsersByIds(tx *sql.Tx, ctx context.Context, ids []int, limit int, offset
 	defer rows.Close()
 
 	for rows.Next() {
-		err := rows.Scan(&id, &login, &email, &password, &role, &state, &createDate, &lastUpdateDate)
+		err := rows.Scan(&id, &uuid, &login, &email, &password, &role, &state, &createDate, &lastUpdateDate)
 		if err != nil {
 			return users, fmt.Errorf("error at loading users by ids from db, case iterating and using rows.Scan: %v", err)
 		}
-		users = append(users, entities.User{Id: id, Login: login, Email: email, Password: password, Role: role, State: state, CreateDate: createDate, LastUpdateDate: lastUpdateDate})
+		users = append(users, entities.User{Id: id, Uuid: uuid, Login: login, Email: email, Password: password, Role: role, State: state, CreateDate: createDate, LastUpdateDate: lastUpdateDate})
 	}
 	err = rows.Err()
 	if err != nil {
@@ -158,7 +161,7 @@ func GetUserByEmail(tx *sql.Tx, ctx context.Context, email string) (entities.Use
 	var user entities.User
 
 	err := tx.QueryRowContext(ctx, GET_USER_QUERY_BY_EMAIL, email, entities.USER_STATE_DELETED).
-		Scan(&user.Id, &user.Login, &user.Email, &user.Password, &user.Role, &user.State, &user.CreateDate, &user.LastUpdateDate)
+		Scan(&user.Id, &user.Uuid, &user.Login, &user.Email, &user.Password, &user.Role, &user.State, &user.CreateDate, &user.LastUpdateDate)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return user, err
@@ -177,7 +180,7 @@ func CreateUser(tx *sql.Tx, ctx context.Context, params *CreateUserParams) (int,
 	lastUpdateDate := time.Now()
 
 	err := tx.QueryRowContext(ctx, CREATE_USER_QUERY,
-		params.Login, params.Email, params.Password, params.Role, params.State, createDate, lastUpdateDate).
+		params.Uuid, params.Login, params.Email, params.Password, params.Role, params.State, createDate, lastUpdateDate).
 		Scan(&lastInsertId) // scan will release the connection
 	if err != nil {
 		if err.Error() == ErrorUserDuplicateKey.Error() {
@@ -195,17 +198,17 @@ func UpdateUser(tx *sql.Tx, ctx context.Context, params *UpdateUserParams) error
 	if err != nil {
 		return fmt.Errorf("error at updating user, case after preparing statement: %v", err)
 	}
-	res, err := stmt.ExecContext(ctx, params.Id, params.Login, params.Email, params.Password, params.Role, params.State, lastUpdateDate, entities.USER_STATE_DELETED)
+	res, err := stmt.ExecContext(ctx, params.Uuid, params.Login, params.Email, params.Password, params.Role, params.State, lastUpdateDate, entities.USER_STATE_DELETED)
 	if err != nil {
 		if err.Error() == ErrorUserDuplicateKey.Error() {
 			return ErrorUserDuplicateKey
 		}
-		return fmt.Errorf("error at updating user (Id: %v), case after executing statement: %v", params.Id, err)
+		return fmt.Errorf("error at updating user (Uuid: %v), case after executing statement: %v", params.Uuid, err)
 	}
 
 	affectedRowsCount, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("error at updating user (Id: %v), case after counting affected rows: %v", params.Id, err)
+		return fmt.Errorf("error at updating user (Uuid: %v), case after counting affected rows: %v", params.Uuid, err)
 	}
 	if affectedRowsCount == 0 {
 		return sql.ErrNoRows
@@ -214,18 +217,18 @@ func UpdateUser(tx *sql.Tx, ctx context.Context, params *UpdateUserParams) error
 	return nil
 }
 
-func DeleteUser(tx *sql.Tx, ctx context.Context, id int) error {
+func DeleteUser(tx *sql.Tx, ctx context.Context, uuid string) error {
 	stmt, err := tx.PrepareContext(ctx, DELETE_USER_QUERY)
 	if err != nil {
 		return fmt.Errorf("error at deleting user, case after preparing statement: %v", err)
 	}
-	res, err := stmt.ExecContext(ctx, id)
+	res, err := stmt.ExecContext(ctx, uuid)
 	if err != nil {
-		return fmt.Errorf("error at deleting user by id '%v', case after executing statement: %v", id, err)
+		return fmt.Errorf("error at deleting user by uuid '%v', case after executing statement: %v", uuid, err)
 	}
 	affectedRowsCount, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("error at deleting user by id '%v', case after counting affected rows: %v", id, err)
+		return fmt.Errorf("error at deleting user by uuid '%v', case after counting affected rows: %v", uuid, err)
 	}
 	if affectedRowsCount == 0 {
 		return sql.ErrNoRows
