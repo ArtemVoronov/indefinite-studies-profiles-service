@@ -6,9 +6,4 @@ import (
 
 func main() {
 	app.Start()
-
-	// TODO:
-	// 1. update model: add uuid for user
-	// 2. add sharding based on uuid
-	// 3. send user uuid to auth service during verification of credentials
 }
