@@ -64,10 +64,10 @@ const (
 
 	DELETE_USER_QUERY = `DELETE from users WHERE uuid = $1`
 
-	GET_USERS_BY_IDS_QUERY = `SELECT 
+	GET_USERS_BY_UUIDS_QUERY = `SELECT 
 	id, uuid, login, email, password, role, state, create_date, last_update_date
 	FROM users 
-	WHERE state != $4 AND id = ANY($1)
+	WHERE state != $4 AND uuid = ANY($1)
 	LIMIT $2 OFFSET $3`
 )
 
@@ -136,7 +136,7 @@ func GetUsersByIds(tx *sql.Tx, ctx context.Context, ids []int, limit int, offset
 		lastUpdateDate time.Time
 	)
 
-	rows, err := tx.QueryContext(ctx, GET_USERS_BY_IDS_QUERY, pq.Array(ids), limit, offset, entities.USER_STATE_DELETED)
+	rows, err := tx.QueryContext(ctx, GET_USERS_BY_UUIDS_QUERY, pq.Array(uuids), limit, offset, entities.USER_STATE_DELETED)
 	if err != nil {
 		return users, fmt.Errorf("error at loading users by ids, case after Query: %v", err)
 	}

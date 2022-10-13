@@ -43,7 +43,7 @@ func (s *ProfilesService) Shutdown() error {
 
 func (s *ProfilesService) client(userUuid string) *db.PostgreSQLService {
 	bucketIndex := s.shardService.GetBucketIndex(userUuid)
-	bucket := s.shardService.GetBucket(bucketIndex)
+	bucket := s.shardService.GetBucketByIndex(bucketIndex)
 	log.Info(fmt.Sprintf("bucket: %v\tbucketIndex: %v", bucket, bucketIndex))
 	return s.clientShards[bucket]
 }
@@ -157,11 +157,6 @@ func (s *ProfilesService) GetUsers(offset int, limit int, shard int) ([]entities
 		return nil, fmt.Errorf("unable to convert result into []entities.User")
 	}
 	return result, nil
-}
-
-func (s *ProfilesService) GetUsersByUuids(uuids []string) ([]entities.User, error) {
-	// TODO
-	return nil, fmt.Errorf("NOT IMPLEMENTED")
 }
 
 func (s *ProfilesService) CreateRegistrationToken(userUuid string, userId int, token string) error {

@@ -8,16 +8,10 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/credentials"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
-	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/queries"
-	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api"
-	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/profiles"
-	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
-// TODO: unify all CRUD ops of users into ProfilesService
 
 type ProfilesServiceServer struct {
 	profiles.UnimplementedProfilesServiceServer
@@ -33,14 +27,11 @@ func (s *ProfilesServiceServer) ValidateCredentials(ctx context.Context, in *pro
 		return nil, err
 	}
 
-	return &profiles.ValidateCredentialsReply{UserId: int32(result.UserId), IsValid: result.IsValid, Role: result.Role}, nil
+	return &profiles.ValidateCredentialsReply{UserUuid: result.UserUuid, IsValid: result.IsValid, Role: result.Role}, nil
 }
 
 func (s *ProfilesServiceServer) GetUser(ctx context.Context, in *profiles.GetUserRequest) (*profiles.GetUserReply, error) {
-	data, err := services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-		user, err := queries.GetUser(tx, ctx, int(in.GetId()))
-		return user, err
-	})()
+	user, err := services.Instance().Profiles().GetUser(in.Uuid)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -50,31 +41,11 @@ func (s *ProfilesServiceServer) GetUser(ctx context.Context, in *profiles.GetUse
 		}
 	}
 
-	user, ok := data.(entities.User)
-	if !ok {
-		log.Error("Unable to get to user", api.ERROR_ASSERT_RESULT_TYPE)
-		return &profiles.GetUserReply{}, err
-	}
-
 	return toGetUserReply(&user), nil
 }
 
 func (s *ProfilesServiceServer) GetUsers(ctx context.Context, in *profiles.GetUsersRequest) (*profiles.GetUsersReply, error) {
-	var data any
-	var err error
-
-	if len(in.GetIds()) > 0 {
-		data, err = services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-			users, err := queries.GetUsersByIds(tx, ctx, utils.Int32SliceToIntSlice(in.GetIds()), int(in.Limit), int(in.Offset))
-			return users, err
-		})()
-	} else {
-		data, err = services.Instance().DB().Tx(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) (any, error) {
-			users, err := queries.GetUsers(tx, ctx, int(in.Limit), int(in.Offset))
-			return users, err
-		})()
-	}
-
+	users, err := services.Instance().Profiles().GetUsers(int(in.GetOffset()), int(in.GetLimit()), int(in.GetShard()))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &profiles.GetUsersReply{}, nil
@@ -82,13 +53,6 @@ func (s *ProfilesServiceServer) GetUsers(ctx context.Context, in *profiles.GetUs
 			return &profiles.GetUsersReply{}, err
 		}
 	}
-
-	users, ok := data.([]entities.User)
-	if !ok {
-		log.Error("Unable to get to users", api.ERROR_ASSERT_RESULT_TYPE)
-		return &profiles.GetUsersReply{}, err
-	}
-
 	return &profiles.GetUsersReply{Users: toGetUsersReply(users)}, nil
 }
 
@@ -99,6 +63,7 @@ func (s *ProfilesServiceServer) GetUsersStream(stream profiles.ProfilesService_G
 func toGetUserReply(user *entities.User) *profiles.GetUserReply {
 	return &profiles.GetUserReply{
 		Id:             int32(user.Id),
+		Uuid:           user.Uuid,
 		Login:          user.Login,
 		Email:          user.Email,
 		Role:           user.Role,

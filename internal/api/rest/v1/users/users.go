@@ -320,7 +320,7 @@ func DeleteUser(c *gin.Context) {
 
 	if !app.IsSameUser(c, dto.Uuid) && !app.HasOwnerRole(c) {
 		c.JSON(http.StatusForbidden, "Forbidden")
-		log.Info(fmt.Sprintf("Forbidden to delete user. User ID from body: %v", dto.Id))
+		log.Info(fmt.Sprintf("Forbidden to delete user. User UUID from body: %v", dto.Uuid))
 		return
 	}
 
