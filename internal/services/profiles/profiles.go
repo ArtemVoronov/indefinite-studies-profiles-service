@@ -165,7 +165,7 @@ func (s *ProfilesService) CreateRegistrationToken(userUuid string, userId int, t
 	})()
 }
 
-func (s *ProfilesService) UpdsertRegistrationToken(userUuid string, userId int, token string) error {
+func (s *ProfilesService) UpsertRegistrationToken(userUuid string, userId int, token string) error {
 	return s.client(userUuid).TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
 		err := queries.UpdateRegistrationToken(tx, ctx, userId, token)
 		if err == sql.ErrNoRows {
@@ -194,7 +194,7 @@ func (s *ProfilesService) GetRegistrationToken(userUuid string, token string) (e
 	return result, nil
 }
 
-func (s *ProfilesService) UpdsertRestorePasswordToken(userUuid string, userId int, token string) error {
+func (s *ProfilesService) UpsertRestorePasswordToken(userUuid string, userId int, token string) error {
 	return s.client(userUuid).TxVoid(func(tx *sql.Tx, ctx context.Context, cancel context.CancelFunc) error {
 		err := queries.UpdateRestorePasswordToken(tx, ctx, userId, token)
 		if err == sql.ErrNoRows {

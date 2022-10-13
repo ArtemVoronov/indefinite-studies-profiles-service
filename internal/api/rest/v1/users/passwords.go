@@ -56,7 +56,7 @@ func RestorePasswordStart(c *gin.Context) {
 		return
 	}
 
-	err = services.Instance().Profiles().UpdsertRestorePasswordToken(user.Uuid, user.Id, token)
+	err = services.Instance().Profiles().UpsertRestorePasswordToken(user.Uuid, user.Id, token)
 
 	if err != nil {
 		if err.Error() == queries.ErrorRegistrationTokenDuplicateKey.Error() {
