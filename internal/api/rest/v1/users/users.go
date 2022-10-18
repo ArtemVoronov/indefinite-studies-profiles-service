@@ -14,6 +14,7 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/api/validation"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
+	utilsEntities "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db/entities"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/feed"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
@@ -148,7 +149,7 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	possibleUserRoles := entities.GetPossibleUserRoles()
+	possibleUserRoles := utilsEntities.GetPossibleUserRoles()
 	if !utils.Contains(possibleUserRoles, dto.Role) {
 		c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to create user. Wrong 'Role' value. Possible values: %v", possibleUserRoles))
 		return
@@ -247,7 +248,7 @@ func UpdateUser(c *gin.Context) {
 			log.Info(fmt.Sprintf("Forbidden to update user role. User Uuid from body: %v", dto.Uuid))
 			return
 		}
-		possibleUserRoles := entities.GetPossibleUserRoles()
+		possibleUserRoles := utilsEntities.GetPossibleUserRoles()
 		if !utils.Contains(possibleUserRoles, *dto.Role) {
 			c.JSON(http.StatusBadRequest, fmt.Sprintf("Unable to update user. Wrong 'Role' value. Possible values: %v", possibleUserRoles))
 			return
