@@ -53,7 +53,15 @@ func (s *ProfilesServiceServer) GetUsers(ctx context.Context, in *profiles.GetUs
 			return &profiles.GetUsersReply{}, err
 		}
 	}
-	return &profiles.GetUsersReply{Users: toGetUsersReply(users)}, nil
+	result := &profiles.GetUsersReply{
+		Offset:      in.Offset,
+		Limit:       in.Limit,
+		Count:       int32(len(users)),
+		Users:       toGetUsersReply(users),
+		ShardsCount: int32(services.Instance().Profiles().ShardsNum),
+	}
+
+	return result, nil
 }
 
 func (s *ProfilesServiceServer) GetUsersStream(stream profiles.ProfilesService_GetUsersStreamServer) error {
