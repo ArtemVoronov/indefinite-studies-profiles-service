@@ -221,6 +221,11 @@ func UpdateUser(c *gin.Context) {
 			log.Info(fmt.Sprintf("Forbidden to update user state. User Uuid from body: %v", dto.Uuid))
 			return
 		}
+		if dto.Role != nil && *dto.Role == utilsEntities.USER_ROLE_OWNER {
+			c.JSON(http.StatusForbidden, "Forbidden")
+			log.Info(fmt.Sprintf("Forbidden to block owners. User Uuid from body: %v", dto.Uuid))
+			return
+		}
 		if *dto.State == entities.USER_STATE_DELETED {
 			c.JSON(http.StatusBadRequest, api.DELETE_VIA_PUT_REQUEST_IS_FODBIDDEN)
 			return
