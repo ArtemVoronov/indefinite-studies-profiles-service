@@ -20,7 +20,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="email" type="varchar(512)">
-                <constraints nullable="false"/>
+                <constraints nullable="false" unique="true"/>
             </column>
             <column name="password" type="varchar(128)">
                 <constraints nullable="false"/>
@@ -43,7 +43,7 @@
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="token" type="varchar(100)">
-                <constraints nullable="false"/>
+                <constraints nullable="false" unique="true"/>
             </column>
             <column name="expire_at" type="timestamp">
                 <constraints nullable="false"/>
@@ -60,7 +60,7 @@
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="token" type="varchar(100)">
-                <constraints nullable="false"/>
+                <constraints nullable="false" unique="true"/>
             </column>
             <column name="expire_at" type="timestamp">
                 <constraints nullable="false"/>
@@ -71,14 +71,10 @@
             <column name="last_update_date" type="timestamp">
                 <constraints nullable="false"/>
             </column>
-        </createTable>   
-        <addUniqueConstraint tableName="users" columnNames="uuid" constraintName="users_uuid_unique" />
+        </createTable>
         <sql dbms="postgresql">
             CREATE INDEX users_uuid_b_tree_index ON users (uuid);
         </sql>
-        <addUniqueConstraint tableName="users" columnNames="email" constraintName="users_email_unique" />
-        <addUniqueConstraint tableName="registration_tokens" columnNames="token" constraintName="registration_tokens_token_unique" />
-        <addUniqueConstraint tableName="restore_password_tokens" columnNames="token" constraintName="restore_password_tokens_token_unique" />
         <rollback>         
             <dropTable tableName="restore_password_tokens"/>
             <dropTable tableName="registration_tokens"/>
