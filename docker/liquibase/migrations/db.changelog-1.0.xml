@@ -13,8 +13,8 @@
             <column name="id" type="int" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="uuid" type="varchar(36)">
-                <constraints nullable="false"/>
+            <column name="uuid" type="uuid">
+                <constraints nullable="false" unique="true"/>
             </column>
             <column name="login" type="varchar(256)">
                 <constraints nullable="false"/>
@@ -74,7 +74,7 @@
         </createTable>   
         <addUniqueConstraint tableName="users" columnNames="uuid" constraintName="users_uuid_unique" />
         <sql dbms="postgresql">
-            CREATE INDEX users_uuid_hash_index ON users USING HASH (uuid);
+            CREATE INDEX users_uuid_b_tree_index ON users (uuid);
         </sql>
         <addUniqueConstraint tableName="users" columnNames="email" constraintName="users_email_unique" />
         <addUniqueConstraint tableName="registration_tokens" columnNames="token" constraintName="registration_tokens_token_unique" />
