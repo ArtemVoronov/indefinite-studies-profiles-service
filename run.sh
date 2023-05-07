@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 down() {
     docker-compose down
 }
