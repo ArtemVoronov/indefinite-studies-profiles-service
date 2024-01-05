@@ -73,6 +73,7 @@ func CreateRegistrationToken(tx *sql.Tx, ctx context.Context, userId int, token 
 	if err != nil {
 		return fmt.Errorf("error at inserting registration token (UserId: '%v', Token: '%v'), case after preparing statement: %s", userId, token, err)
 	}
+	defer stmt.Close()
 
 	_, err = stmt.ExecContext(ctx, userId, token, expireAt, createDate, createDate)
 	if err != nil {
@@ -92,6 +93,7 @@ func UpdateRegistrationToken(tx *sql.Tx, ctx context.Context, userId int, token 
 	if err != nil {
 		return fmt.Errorf("error at updating registration token, case after preparing statement: %v", err)
 	}
+	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, userId, token, expireAt, lastUpdateDate)
 	if err != nil {
 		if err.Error() == ErrorUserDuplicateKey.Error() {
@@ -116,6 +118,7 @@ func DeleteRegistrationToken(tx *sql.Tx, ctx context.Context, token string) erro
 	if err != nil {
 		return fmt.Errorf("error at deleting registration token, case after preparing statement: %v", err)
 	}
+	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, token)
 	if err != nil {
 		return fmt.Errorf("error at deleting registration token by token '%v', case after executing statement: %v", token, err)
@@ -154,6 +157,7 @@ func CreateRestorePasswordToken(tx *sql.Tx, ctx context.Context, userId int, tok
 	if err != nil {
 		return fmt.Errorf("error at inserting restore password token (UserId: '%v', Token: '%v'), case after preparing statement: %s", userId, token, err)
 	}
+	defer stmt.Close()
 
 	_, err = stmt.ExecContext(ctx, userId, token, expireAt, createDate, createDate)
 	if err != nil {
@@ -173,6 +177,7 @@ func UpdateRestorePasswordToken(tx *sql.Tx, ctx context.Context, userId int, tok
 	if err != nil {
 		return fmt.Errorf("error at updating restore password token, case after preparing statement: %v", err)
 	}
+	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, userId, token, expireAt, lastUpdateDate)
 	if err != nil {
 		if err.Error() == ErrorUserDuplicateKey.Error() {
@@ -197,6 +202,7 @@ func DeleteRestorePasswordToken(tx *sql.Tx, ctx context.Context, token string) e
 	if err != nil {
 		return fmt.Errorf("error at deleting restore password token, case after preparing statement: %v", err)
 	}
+	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, token)
 	if err != nil {
 		return fmt.Errorf("error at deleting restore password token by token '%v', case after executing statement: %v", token, err)

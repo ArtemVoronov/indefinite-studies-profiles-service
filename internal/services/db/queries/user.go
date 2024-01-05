@@ -198,6 +198,7 @@ func UpdateUser(tx *sql.Tx, ctx context.Context, params *UpdateUserParams) error
 	if err != nil {
 		return fmt.Errorf("error at updating user, case after preparing statement: %v", err)
 	}
+	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, params.Uuid, params.Login, params.Email, params.Password, params.Role, params.State, lastUpdateDate, entities.USER_STATE_DELETED)
 	if err != nil {
 		if err.Error() == ErrorUserDuplicateKey.Error() {
@@ -222,6 +223,7 @@ func DeleteUser(tx *sql.Tx, ctx context.Context, uuid string) error {
 	if err != nil {
 		return fmt.Errorf("error at deleting user, case after preparing statement: %v", err)
 	}
+	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, uuid)
 	if err != nil {
 		return fmt.Errorf("error at deleting user by uuid '%v', case after executing statement: %v", uuid, err)
