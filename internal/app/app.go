@@ -56,6 +56,7 @@ func createRestApi(logger *logrus.Logger) *gin.Engine {
 	v1 := router.Group("/api/v1")
 
 	v1.GET("/users/ping", ping.Ping)
+	v1.GET("/users/name/:uuid", users.GetUserName)
 
 	v1.POST("/users/signup", users.SignUpStart)
 	v1.PUT("/users/signup", users.SignUpFinish)
@@ -63,9 +64,6 @@ func createRestApi(logger *logrus.Logger) *gin.Engine {
 
 	v1.POST("/users/password/restore", users.RestorePasswordStart)
 	v1.PUT("/users/password/restore", users.RestorePasswordFinish)
-
-	// v1.GET("/users", users.GetUsers)
-	// v1.POST("/users", users.CreateUser)
 
 	authorized := router.Group("/api/v1")
 	authorized.Use(app.AuthReqired(authenicate))
@@ -75,10 +73,10 @@ func createRestApi(logger *logrus.Logger) *gin.Engine {
 
 		// TODO: add explicit route for changing email with confirmation
 
-		// authorized.GET("/users", app.RequiredOwnerRole(), users.GetUsers) // todo revert
+		authorized.GET("/users", app.RequiredOwnerRole(), users.GetUsers)
 		authorized.GET("/users/:uuid", app.RequiredOwnerRole(), users.GetUser)
 		authorized.GET("/users/me", users.GetMyProfile)
-		// authorized.POST("/users", app.RequiredOwnerRole(), users.CreateUser) // todo revert
+		authorized.POST("/users", app.RequiredOwnerRole(), users.CreateUser)
 		authorized.PUT("/users", users.UpdateUser)
 		authorized.DELETE("/users", users.DeleteUser)
 	}

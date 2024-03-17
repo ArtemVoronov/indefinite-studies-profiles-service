@@ -141,6 +141,29 @@ func GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, convertUser(user))
 }
 
+func GetUserName(c *gin.Context) {
+	userUuid := c.Param("uuid")
+
+	if userUuid == "" {
+		c.JSON(http.StatusBadRequest, "Missed 'uuid' parameted")
+		return
+	}
+
+	user, err := services.Instance().Profiles().GetUser(userUuid)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, api.PAGE_NOT_FOUND)
+		} else {
+			c.JSON(http.StatusInternalServerError, "Unable to get user")
+			log.Error("Unable to get user", err.Error())
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, user.Login)
+}
+
 func CreateUser(c *gin.Context) {
 	var dto UserCreateDTO
 
