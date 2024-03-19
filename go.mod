@@ -1,6 +1,6 @@
 module github.com/ArtemVoronov/indefinite-studies-profiles-service
 
-go 1.18
+go 1.21
 
 require (
 	github.com/ArtemVoronov/indefinite-studies-utils v0.0.0-20221025145033-22dbb4c4440e
