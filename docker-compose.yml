@@ -93,6 +93,7 @@ services:
     image: nginx
     volumes:
       - ./configs/templates/nginx:/etc/nginx/templates
+      - nginx-volume:/data/nginx/cache
     ports:
       - "10002:80"
     environment:
@@ -114,6 +115,7 @@ services:
 
 volumes:
   database-volume:
+  nginx-volume:
 networks:
   default:
     name: indefinite-studies-profiles-service-network
