@@ -15,7 +15,6 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/app"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
 	utilsEntities "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db/entities"
-	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/feed"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -309,35 +308,7 @@ func UpdateUser(c *gin.Context) {
 
 	log.Info(fmt.Sprintf("Updated user. Uuid: %v", dto.Uuid))
 
-	user, err := services.Instance().Profiles().GetUser(dto.Uuid)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, "Unable to update user")
-		log.Error("Unable to get user by uuid: "+dto.Uuid, err.Error())
-
-		return
-	}
-
-	err = services.Instance().Feed().UpdateUser(toFeedUserDTO(&user))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, "Unable to update user")
-		log.Error("Unable to update user at feed service", err.Error())
-		return
-	}
-
 	c.JSON(http.StatusOK, api.DONE)
-}
-
-func toFeedUserDTO(user *entities.User) *feed.FeedUserDTO {
-	result := &feed.FeedUserDTO{
-		Uuid:           user.Uuid,
-		Login:          user.Login,
-		Email:          user.Email,
-		Role:           user.Role,
-		State:          user.State,
-		CreateDate:     user.CreateDate,
-		LastUpdateDate: user.LastUpdateDate,
-	}
-	return result
 }
 
 func DeleteUser(c *gin.Context) {

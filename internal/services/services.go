@@ -11,7 +11,6 @@ import (
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/log"
 	auth "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/auth"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/db"
-	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/feed"
 	notifications "github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/notifications"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/shard"
 	"github.com/ArtemVoronov/indefinite-studies-utils/pkg/services/subscriptions"
@@ -21,7 +20,6 @@ import (
 
 type Services struct {
 	auth          *auth.AuthGRPCService
-	feed          *feed.FeedBuilderGRPCService
 	whitelist     *whitelist.WhiteListService
 	notifications *notifications.NotificationsGRPCService
 	subscriptions *subscriptions.SubscriptionsGRPCService
@@ -43,10 +41,6 @@ func Instance() *Services {
 
 func createServices() *Services {
 	authcreds, err := app.LoadTLSCredentialsForClient(utils.EnvVar("AUTH_SERVICE_CLIENT_TLS_CERT_PATH"))
-	if err != nil {
-		log.Fatalf("unable to load TLS credentials: %s", err)
-	}
-	feedcreds, err := app.LoadTLSCredentialsForClient(utils.EnvVar("FEED_SERVICE_CLIENT_TLS_CERT_PATH"))
 	if err != nil {
 		log.Fatalf("unable to load TLS credentials: %s", err)
 	}
@@ -74,7 +68,6 @@ func createServices() *Services {
 
 	return &Services{
 		auth:          auth.CreateAuthGRPCService(utils.EnvVar("AUTH_SERVICE_GRPC_HOST")+":"+utils.EnvVar("AUTH_SERVICE_GRPC_PORT"), &authcreds),
-		feed:          feed.CreateFeedBuilderGRPCService(utils.EnvVar("FEED_SERVICE_GRPC_HOST")+":"+utils.EnvVar("FEED_SERVICE_GRPC_PORT"), &feedcreds),
 		whitelist:     whitelist.CreateWhiteListService(utils.EnvVar("APP_WHITE_LIST_PATH")),
 		notifications: notifications.CreateNotificationsGRPCService(utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("NOTIFICATIONS_SERVICE_GRPC_PORT"), &notificationscreds),
 		subscriptions: subscriptions.CreateSubscriptionsGRPCService(utils.EnvVar("SUBSCRIPTIONS_SERVICE_GRPC_HOST")+":"+utils.EnvVar("SUBSCRIPTIONS_SERVICE_GRPC_PORT"), &subscriptionscreds),
@@ -90,10 +83,6 @@ func (s *Services) Shutdown() error {
 		result = append(result, err)
 	}
 	err = s.profiles.Shutdown()
-	if err != nil {
-		result = append(result, err)
-	}
-	err = s.feed.Shutdown()
 	if err != nil {
 		result = append(result, err)
 	}
@@ -121,10 +110,6 @@ func (s *Services) Shutdown() error {
 
 func (s *Services) Auth() *auth.AuthGRPCService {
 	return s.auth
-}
-
-func (s *Services) Feed() *feed.FeedBuilderGRPCService {
-	return s.feed
 }
 
 func (s *Services) Whitelist() *whitelist.WhiteListService {

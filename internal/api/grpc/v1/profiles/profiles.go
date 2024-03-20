@@ -3,7 +3,6 @@ package profiles
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services"
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/credentials"
@@ -44,30 +43,6 @@ func (s *ProfilesServiceServer) GetUser(ctx context.Context, in *profiles.GetUse
 	return toGetUserReply(&user), nil
 }
 
-func (s *ProfilesServiceServer) GetUsers(ctx context.Context, in *profiles.GetUsersRequest) (*profiles.GetUsersReply, error) {
-	users, err := services.Instance().Profiles().GetUsers(int(in.GetOffset()), int(in.GetLimit()), int(in.GetShard()))
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return &profiles.GetUsersReply{}, nil
-		} else {
-			return &profiles.GetUsersReply{}, err
-		}
-	}
-	result := &profiles.GetUsersReply{
-		Offset:      in.Offset,
-		Limit:       in.Limit,
-		Count:       int32(len(users)),
-		Users:       toGetUsersReply(users),
-		ShardsCount: int32(services.Instance().Profiles().ShardsNum),
-	}
-
-	return result, nil
-}
-
-func (s *ProfilesServiceServer) GetUsersStream(stream profiles.ProfilesService_GetUsersStreamServer) error {
-	return fmt.Errorf("NOT IMPLEMENTED") // TODO
-}
-
 func toGetUserReply(user *entities.User) *profiles.GetUserReply {
 	return &profiles.GetUserReply{
 		Id:             int32(user.Id),
@@ -79,12 +54,4 @@ func toGetUserReply(user *entities.User) *profiles.GetUserReply {
 		CreateDate:     timestamppb.New(user.CreateDate),
 		LastUpdateDate: timestamppb.New(user.LastUpdateDate),
 	}
-}
-
-func toGetUsersReply(users []entities.User) []*profiles.GetUserReply {
-	var result []*profiles.GetUserReply = make([]*profiles.GetUserReply, 0, len(users))
-	for _, u := range users {
-		result = append(result, toGetUserReply(&u))
-	}
-	return result
 }
