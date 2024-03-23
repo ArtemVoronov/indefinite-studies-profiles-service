@@ -10,7 +10,7 @@
 
     <changeSet id="1" author="voronov">
         <createTable tableName="users">
-            <column name="id" type="int" autoIncrement="true">
+            <column name="id" type="bigserial" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="uuid" type="uuid">
@@ -39,7 +39,7 @@
             </column>
         </createTable>        
         <createTable tableName="registration_tokens">
-            <column name="user_id" type="int">
+            <column name="user_id" type="bigint">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="token" type="varchar(100)">
@@ -56,7 +56,7 @@
             </column>
         </createTable>  
         <createTable tableName="restore_password_tokens">
-            <column name="user_id" type="int">
+            <column name="user_id" type="bigint">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="token" type="varchar(100)">
