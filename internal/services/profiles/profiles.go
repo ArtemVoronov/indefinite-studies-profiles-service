@@ -3,6 +3,7 @@ package profiles
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/ArtemVoronov/indefinite-studies-profiles-service/internal/services/db/entities"
@@ -36,7 +37,7 @@ func (s *ProfilesService) Shutdown() error {
 		}
 	}
 	if len(result) > 0 {
-		return fmt.Errorf("errors during shutdown: %v", result)
+		errors.Join(result...)
 	}
 	return nil
 }

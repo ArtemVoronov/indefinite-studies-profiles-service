@@ -58,7 +58,7 @@ func GetRegistrationToken(tx *sql.Tx, ctx context.Context, token string) (entiti
 		if err == sql.ErrNoRows {
 			return result, err
 		} else {
-			return result, fmt.Errorf("error at loading registration token by token '%v' from db, case after QueryRow.Scan: %v", token, err)
+			return result, fmt.Errorf("error at loading registration token by token '%v' from db, case after QueryRow.Scan: %w", token, err)
 		}
 	}
 
@@ -71,7 +71,7 @@ func CreateRegistrationToken(tx *sql.Tx, ctx context.Context, userId int, token 
 
 	stmt, err := tx.PrepareContext(ctx, CREATE_REGISTRATION_TOKEN_QUERY)
 	if err != nil {
-		return fmt.Errorf("error at inserting registration token (UserId: '%v', Token: '%v'), case after preparing statement: %s", userId, token, err)
+		return fmt.Errorf("error at inserting registration token (UserId: '%v', Token: '%v'), case after preparing statement: %w", userId, token, err)
 	}
 	defer stmt.Close()
 
@@ -80,7 +80,7 @@ func CreateRegistrationToken(tx *sql.Tx, ctx context.Context, userId int, token 
 		if err.Error() == ErrorRegistrationTokenDuplicateKey.Error() {
 			return ErrorRegistrationTokenDuplicateKey
 		}
-		return fmt.Errorf("error at inserting registration token (UserId: '%v', Token: '%v'), case after ExecContext: %s", userId, token, err)
+		return fmt.Errorf("error at inserting registration token (UserId: '%v', Token: '%v'), case after ExecContext: %w", userId, token, err)
 	}
 
 	return nil
@@ -91,7 +91,7 @@ func UpdateRegistrationToken(tx *sql.Tx, ctx context.Context, userId int, token 
 	expireAt := lastUpdateDate.Add(24 * time.Hour) // TODO: make as param?
 	stmt, err := tx.PrepareContext(ctx, UPDATE_REGISTRATION_TOKEN_QUERY)
 	if err != nil {
-		return fmt.Errorf("error at updating registration token, case after preparing statement: %v", err)
+		return fmt.Errorf("error at updating registration token, case after preparing statement: %w", err)
 	}
 	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, userId, token, expireAt, lastUpdateDate)
@@ -99,12 +99,12 @@ func UpdateRegistrationToken(tx *sql.Tx, ctx context.Context, userId int, token 
 		if err.Error() == ErrorUserDuplicateKey.Error() {
 			return ErrorUserDuplicateKey
 		}
-		return fmt.Errorf("error at updating registration token (Token: '%v'), case after executing statement: %v", token, err)
+		return fmt.Errorf("error at updating registration token (Token: '%v'), case after executing statement: %w", token, err)
 	}
 
 	affectedRowsCount, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("error at updating registration token (Token: '%v'), case after counting affected rows: %v", token, err)
+		return fmt.Errorf("error at updating registration token (Token: '%v'), case after counting affected rows: %w", token, err)
 	}
 	if affectedRowsCount == 0 {
 		return sql.ErrNoRows
@@ -116,16 +116,16 @@ func UpdateRegistrationToken(tx *sql.Tx, ctx context.Context, userId int, token 
 func DeleteRegistrationToken(tx *sql.Tx, ctx context.Context, token string) error {
 	stmt, err := tx.PrepareContext(ctx, DELETE_REGISTRATION_TOKEN_QUERY)
 	if err != nil {
-		return fmt.Errorf("error at deleting registration token, case after preparing statement: %v", err)
+		return fmt.Errorf("error at deleting registration token, case after preparing statement: %w", err)
 	}
 	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, token)
 	if err != nil {
-		return fmt.Errorf("error at deleting registration token by token '%v', case after executing statement: %v", token, err)
+		return fmt.Errorf("error at deleting registration token by token '%v', case after executing statement: %w", token, err)
 	}
 	affectedRowsCount, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("error at deleting registration token by token '%v', case after counting affected rows: %v", token, err)
+		return fmt.Errorf("error at deleting registration token by token '%v', case after counting affected rows: %w", token, err)
 	}
 	if affectedRowsCount == 0 {
 		return sql.ErrNoRows
@@ -142,7 +142,7 @@ func GetRestorePasswordToken(tx *sql.Tx, ctx context.Context, token string) (ent
 		if err == sql.ErrNoRows {
 			return result, err
 		} else {
-			return result, fmt.Errorf("error at loading restore password token by token '%v' from db, case after QueryRow.Scan: %v", token, err)
+			return result, fmt.Errorf("error at loading restore password token by token '%v' from db, case after QueryRow.Scan: %w", token, err)
 		}
 	}
 
@@ -155,7 +155,7 @@ func CreateRestorePasswordToken(tx *sql.Tx, ctx context.Context, userId int, tok
 
 	stmt, err := tx.PrepareContext(ctx, CREATE_RESTORE_PASSWORD_TOKEN_QUERY)
 	if err != nil {
-		return fmt.Errorf("error at inserting restore password token (UserId: '%v', Token: '%v'), case after preparing statement: %s", userId, token, err)
+		return fmt.Errorf("error at inserting restore password token (UserId: '%v', Token: '%v'), case after preparing statement: %w", userId, token, err)
 	}
 	defer stmt.Close()
 
@@ -164,7 +164,7 @@ func CreateRestorePasswordToken(tx *sql.Tx, ctx context.Context, userId int, tok
 		if err.Error() == ErrorRestorePasswordTokenDuplicateKey.Error() {
 			return ErrorRestorePasswordTokenDuplicateKey
 		}
-		return fmt.Errorf("error at inserting restore password token (UserId: '%v', Token: '%v'), case after ExecContext: %s", userId, token, err)
+		return fmt.Errorf("error at inserting restore password token (UserId: '%v', Token: '%v'), case after ExecContext: %w", userId, token, err)
 	}
 
 	return nil
@@ -175,7 +175,7 @@ func UpdateRestorePasswordToken(tx *sql.Tx, ctx context.Context, userId int, tok
 	expireAt := lastUpdateDate.Add(24 * time.Hour) // TODO: make as param?
 	stmt, err := tx.PrepareContext(ctx, UPDATE_RESTORE_PASSWORD_TOKEN_QUERY)
 	if err != nil {
-		return fmt.Errorf("error at updating restore password token, case after preparing statement: %v", err)
+		return fmt.Errorf("error at updating restore password token, case after preparing statement: %w", err)
 	}
 	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, userId, token, expireAt, lastUpdateDate)
@@ -183,12 +183,12 @@ func UpdateRestorePasswordToken(tx *sql.Tx, ctx context.Context, userId int, tok
 		if err.Error() == ErrorUserDuplicateKey.Error() {
 			return ErrorUserDuplicateKey
 		}
-		return fmt.Errorf("error at updating restore password token (Token: '%v'), case after executing statement: %v", token, err)
+		return fmt.Errorf("error at updating restore password token (Token: '%v'), case after executing statement: %w", token, err)
 	}
 
 	affectedRowsCount, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("error at updating restore password token (Token: '%v'), case after counting affected rows: %v", token, err)
+		return fmt.Errorf("error at updating restore password token (Token: '%v'), case after counting affected rows: %w", token, err)
 	}
 	if affectedRowsCount == 0 {
 		return sql.ErrNoRows
@@ -200,16 +200,16 @@ func UpdateRestorePasswordToken(tx *sql.Tx, ctx context.Context, userId int, tok
 func DeleteRestorePasswordToken(tx *sql.Tx, ctx context.Context, token string) error {
 	stmt, err := tx.PrepareContext(ctx, DELETE_RESTORE_PASSWORD_TOKEN_QUERY)
 	if err != nil {
-		return fmt.Errorf("error at deleting restore password token, case after preparing statement: %v", err)
+		return fmt.Errorf("error at deleting restore password token, case after preparing statement: %w", err)
 	}
 	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, token)
 	if err != nil {
-		return fmt.Errorf("error at deleting restore password token by token '%v', case after executing statement: %v", token, err)
+		return fmt.Errorf("error at deleting restore password token by token '%v', case after executing statement: %w", token, err)
 	}
 	affectedRowsCount, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("error at deleting restore password token by token '%v', case after counting affected rows: %v", token, err)
+		return fmt.Errorf("error at deleting restore password token by token '%v', case after counting affected rows: %w", token, err)
 	}
 	if affectedRowsCount == 0 {
 		return sql.ErrNoRows

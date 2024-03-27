@@ -87,20 +87,20 @@ func GetUsers(tx *sql.Tx, ctx context.Context, limit int, offset int) ([]entitie
 
 	rows, err := tx.QueryContext(ctx, GET_USERS_QUERY, limit, offset, entities.USER_STATE_DELETED)
 	if err != nil {
-		return user, fmt.Errorf("error at loading users from db, case after Query: %v", err)
+		return user, fmt.Errorf("error at loading users from db, case after Query: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		err := rows.Scan(&id, &uuid, &login, &email, &password, &role, &state, &createDate, &lastUpdateDate)
 		if err != nil {
-			return user, fmt.Errorf("error at loading users from db, case iterating and using rows.Scan: %v", err)
+			return user, fmt.Errorf("error at loading users from db, case iterating and using rows.Scan: %w", err)
 		}
 		user = append(user, entities.User{Id: id, Uuid: uuid, Login: login, Email: email, Password: password, Role: role, State: state, CreateDate: createDate, LastUpdateDate: lastUpdateDate})
 	}
 	err = rows.Err()
 	if err != nil {
-		return user, fmt.Errorf("error at loading user from db, case after iterating: %v", err)
+		return user, fmt.Errorf("error at loading user from db, case after iterating: %w", err)
 	}
 
 	return user, nil
@@ -115,7 +115,7 @@ func GetUser(tx *sql.Tx, ctx context.Context, uuid string) (entities.User, error
 		if err == sql.ErrNoRows {
 			return user, err
 		} else {
-			return user, fmt.Errorf("error at loading user by uuid '%v' from db, case after QueryRow.Scan: %v", uuid, err)
+			return user, fmt.Errorf("error at loading user by uuid '%v' from db, case after QueryRow.Scan: %w", uuid, err)
 		}
 	}
 
@@ -138,20 +138,20 @@ func GetUsersByIds(tx *sql.Tx, ctx context.Context, ids []int, limit int, offset
 
 	rows, err := tx.QueryContext(ctx, GET_USERS_BY_IDS_QUERY, pq.Array(ids), limit, offset, entities.USER_STATE_DELETED)
 	if err != nil {
-		return users, fmt.Errorf("error at loading users by ids, case after Query: %v", err)
+		return users, fmt.Errorf("error at loading users by ids, case after Query: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		err := rows.Scan(&id, &uuid, &login, &email, &password, &role, &state, &createDate, &lastUpdateDate)
 		if err != nil {
-			return users, fmt.Errorf("error at loading users by ids from db, case iterating and using rows.Scan: %v", err)
+			return users, fmt.Errorf("error at loading users by ids from db, case iterating and using rows.Scan: %w", err)
 		}
 		users = append(users, entities.User{Id: id, Uuid: uuid, Login: login, Email: email, Password: password, Role: role, State: state, CreateDate: createDate, LastUpdateDate: lastUpdateDate})
 	}
 	err = rows.Err()
 	if err != nil {
-		return users, fmt.Errorf("error at loading user by ids from db, case after iterating: %v", err)
+		return users, fmt.Errorf("error at loading user by ids from db, case after iterating: %w", err)
 	}
 
 	return users, nil
@@ -166,7 +166,7 @@ func GetUserByEmail(tx *sql.Tx, ctx context.Context, email string) (entities.Use
 		if err == sql.ErrNoRows {
 			return user, err
 		} else {
-			return user, fmt.Errorf("error at loading user by email '%v' from db, case after QueryRow.Scan: %v", email, err)
+			return user, fmt.Errorf("error at loading user by email '%v' from db, case after QueryRow.Scan: %w", email, err)
 		}
 	}
 
@@ -186,7 +186,7 @@ func CreateUser(tx *sql.Tx, ctx context.Context, params *CreateUserParams) (int,
 		if err.Error() == ErrorUserDuplicateKey.Error() {
 			return -1, ErrorUserDuplicateKey
 		}
-		return -1, fmt.Errorf("error at inserting user (Login: '%v', Email: '%v') into db, case after QueryRow.Scan: %v", params.Login, params.Email, err)
+		return -1, fmt.Errorf("error at inserting user (Login: '%v', Email: '%v') into db, case after QueryRow.Scan: %w", params.Login, params.Email, err)
 	}
 
 	return lastInsertId, nil
@@ -196,7 +196,7 @@ func UpdateUser(tx *sql.Tx, ctx context.Context, params *UpdateUserParams) error
 	lastUpdateDate := time.Now()
 	stmt, err := tx.PrepareContext(ctx, UPDATE_USER_QUERY)
 	if err != nil {
-		return fmt.Errorf("error at updating user, case after preparing statement: %v", err)
+		return fmt.Errorf("error at updating user, case after preparing statement: %w", err)
 	}
 	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, params.Uuid, params.Login, params.Email, params.Password, params.Role, params.State, lastUpdateDate, entities.USER_STATE_DELETED)
@@ -204,12 +204,12 @@ func UpdateUser(tx *sql.Tx, ctx context.Context, params *UpdateUserParams) error
 		if err.Error() == ErrorUserDuplicateKey.Error() {
 			return ErrorUserDuplicateKey
 		}
-		return fmt.Errorf("error at updating user (Uuid: %v), case after executing statement: %v", params.Uuid, err)
+		return fmt.Errorf("error at updating user (Uuid: %v), case after executing statement: %w", params.Uuid, err)
 	}
 
 	affectedRowsCount, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("error at updating user (Uuid: %v), case after counting affected rows: %v", params.Uuid, err)
+		return fmt.Errorf("error at updating user (Uuid: %v), case after counting affected rows: %w", params.Uuid, err)
 	}
 	if affectedRowsCount == 0 {
 		return sql.ErrNoRows
@@ -221,16 +221,16 @@ func UpdateUser(tx *sql.Tx, ctx context.Context, params *UpdateUserParams) error
 func DeleteUser(tx *sql.Tx, ctx context.Context, uuid string) error {
 	stmt, err := tx.PrepareContext(ctx, DELETE_USER_QUERY)
 	if err != nil {
-		return fmt.Errorf("error at deleting user, case after preparing statement: %v", err)
+		return fmt.Errorf("error at deleting user, case after preparing statement: %w", err)
 	}
 	defer stmt.Close()
 	res, err := stmt.ExecContext(ctx, uuid)
 	if err != nil {
-		return fmt.Errorf("error at deleting user by uuid '%v', case after executing statement: %v", uuid, err)
+		return fmt.Errorf("error at deleting user by uuid '%v', case after executing statement: %w", uuid, err)
 	}
 	affectedRowsCount, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("error at deleting user by uuid '%v', case after counting affected rows: %v", uuid, err)
+		return fmt.Errorf("error at deleting user by uuid '%v', case after counting affected rows: %w", uuid, err)
 	}
 	if affectedRowsCount == 0 {
 		return sql.ErrNoRows

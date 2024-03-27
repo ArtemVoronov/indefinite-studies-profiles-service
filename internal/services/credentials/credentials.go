@@ -28,7 +28,7 @@ func CheckCredentials(email string, password string) (*CredentialsValidationResu
 		if err == sql.ErrNoRows {
 			return &CredentialsValidationResult{UserUuid: "", IsValid: false, Role: ""}, nil
 		}
-		return result, fmt.Errorf("unable to check credentials : %s", err)
+		return result, fmt.Errorf("unable to check credentials : %w", err)
 	}
 
 	if user.State == entities.USER_STATE_CONFRIMED && isValidPassword(user.Password, password) {
@@ -43,7 +43,7 @@ func CheckCredentials(email string, password string) (*CredentialsValidationResu
 func HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", fmt.Errorf("unable to create password hash: %v", err.Error())
+		return "", fmt.Errorf("unable to create password hash: %w", err)
 	}
 	return string(hash), nil
 }
