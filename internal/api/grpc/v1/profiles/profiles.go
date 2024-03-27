@@ -45,7 +45,7 @@ func (s *ProfilesServiceServer) GetUser(ctx context.Context, in *profiles.GetUse
 
 func toGetUserReply(user *entities.User) *profiles.GetUserReply {
 	return &profiles.GetUserReply{
-		Id:             int32(user.Id),
+		Id:             int64(user.Id),
 		Uuid:           user.Uuid,
 		Login:          user.Login,
 		Email:          user.Email,
